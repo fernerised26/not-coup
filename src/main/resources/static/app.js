@@ -2,10 +2,12 @@ var stompClient = null;
 var myName = null;
 
 function enableJoin (){
+	$("#name").prop("disabled", false);
 	$("#join").prop("disabled", false);
 }
 
 function enableDC(){
+	$("#name").prop("disabled", true);
 	$("#disconnect").prop("disabled", false);
 }
 

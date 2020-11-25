@@ -15,31 +15,28 @@
     Javascript and reload this page!</h2></noscript>
 <div id="main-content" class="container">
     <div class="row">
-        <div class="col-md-6">
+        <div class="col-md-12">
             <form class="form-inline">
                 <div class="form-group">
                     <label for="name">Alias: </label>
-                    <input type="text" id="name" class="form-control" placeholder="Your name here...">
+                    <input type="text" id="name" class="form-control namePrompt" placeholder="Your name here...">
                 </div>
                 <button id="join" class="btn btn-default" type="submit">Join/Connect</button>
-            </form>
-        </div>
-        <div class="col-md-6">
-            <form class="form-inline">
-                <div class="form-group">
-                    <button id="disconnect" class="btn btn-default" type="submit" disabled="disabled">Disconnect
-                    </button>
-                </div>
+                <button id="disconnect" class="btn btn-default" type="submit" disabled="disabled">Disconnect</button>
             </form>
         </div>
     </div>
     
+    <div class="row" id="spacer">
+    </div>
+    
     <div class="row">
-    	<div class="col-md-8">
-            <div id=tabletop>
+    	<div class="col-md-9">
+            <div id="tabletop">
             </div>
         </div>
-    	<div class="col-md-4">
+    	<div class="col-md-3">
+    		<button id="startRound" class="btn btn-default" type="submit">Start Game</button>
             <table id="player-list" class="table table-striped">
             	<thead>
             		<tr>

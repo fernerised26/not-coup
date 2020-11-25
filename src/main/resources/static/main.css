@@ -3,12 +3,39 @@ body {
 }
 
 #main-content {
-    max-width: 940px;
+    max-width: 1200px;
+    min-width: 900px;
     padding: 2em 3em;
     margin: 0 auto 20px;
-    background-color: #fff;
+    background-color: #bdbdbd;
     border: 1px solid #e5e5e5;
     -webkit-border-radius: 5px;
     -moz-border-radius: 5px;
     border-radius: 5px;
+}
+
+#name {
+	max-width: 250px;
+}
+
+#player-list {
+	max-width: 250px;
+}
+
+#spacer {
+	max-height: 5px;
+	min-height: 5px;
+}
+
+#tabletop {
+	max-width: 850px;
+	min-width: 600px;
+	max-height: 850px;
+	min-height: 600px;
+	background-color: #666666;
+	border: 1px solid #000;
+	-webkit-border-radius: 5px;
+	-moz-border-radius: 5px;
+	border-radius: 5px;
+	padding: 3px;
 }

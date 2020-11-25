@@ -57,4 +57,9 @@ public class CoupController {
 			return "SKIP";
 		}
 	}
+	
+	@MessageMapping("/roundstart")
+	public void startRound() {
+		table.startRound();
+	}
 }

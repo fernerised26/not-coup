@@ -9,9 +9,9 @@ import game.pieces.impl.DeckImpl;
 
 public class Tabletop {
 
-	Map<String, Player> playerMap = new HashMap<>();
-	
-	Deck deck = new DeckImpl();
+	public boolean roundActive = false;
+	public Map<String, Player> playerMap = new HashMap<>();
+	private Deck deck = new DeckImpl();
 	
 	public String addPlayer(String name) {
 		synchronized(playerMap) {
@@ -29,6 +29,10 @@ public class Tabletop {
 	
 	public boolean isPlayerPresent(String name) {
 		return playerMap.containsKey(name);
+	}
+	
+	public void startRound() {
+		roundActive = true;
 	}
 	
 	private String convertSetToHtml(Set<String> playerSet) {
