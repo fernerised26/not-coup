@@ -22,6 +22,10 @@ body {
 	max-width: 250px;
 }
 
+#log-window {
+	max-width: 250px;
+}
+
 #spacer {
 	max-height: 5px;
 	min-height: 5px;

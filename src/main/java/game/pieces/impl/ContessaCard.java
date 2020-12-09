@@ -6,4 +6,11 @@ import game.pieces.Roles;
 public class ContessaCard extends Card {
 
 	public static Roles ROLE = Roles.CONTESSA;
+
+	public String name = "Contessa";
+	
+	@Override
+	public String toString() {
+		return "Contessa";
+	}
 }

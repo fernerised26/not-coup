@@ -1,7 +1,7 @@
 var stompClient = null;
 var myName = null;
 
-function enableJoin (){
+function enableJoin(){
 	$("#name").prop("disabled", false);
 	$("#join").prop("disabled", false);
 }
@@ -23,7 +23,7 @@ function setConnected(connected) {
     }
 }
 
-function connect() {
+function connect(playerName) {
     var socket = new SockJS("/coup");
     stompClient = Stomp.over(socket);
     stompClient.connect({}, function (frame) {
@@ -31,6 +31,9 @@ function connect() {
         console.log("Connected: " + frame);
         stompClient.subscribe("/topic/lobbyevents", function (message) {
             reactLobbyEvent(message.body);
+        });
+		stompClient.subscribe("/queue/" + playerName, function (message) {
+            reactPersonalEvent(message.body);
         });
     });
 }
@@ -54,7 +57,7 @@ function confirmUsername(){
     			myName = candidateName;
 				$.get("/lobby");
 				$("#players").html(rsp.msg);
-				connect();
+				connect(myName);
 			} else {
 				$("#players").html(rsp.msg);
 			}
@@ -63,14 +66,24 @@ function confirmUsername(){
 	.body;
 }
 
-function joinWithName() {
-	connect();
-    stompClient.send("/app/lobbyjoin", {}, myName);
+//function joinWithName() {
+//	connect();
+//    stompClient.send("/app/lobbyjoin", {}, myName);
+//}
+
+function startRound() {
+	stompClient.send("/app/roundstart", {}, myName);
 }
 
-function reactLobbyEvent(message) {
+function reactLobbyEvent(messageBody) {
 	if(message !== "SKIP") {
-    	$("#players").html(message);
+    	$("#log-window").html(messageBody);
+	}
+}
+
+function reactPersonalEvent(messageBody){
+	if(message !== "SKIP") {
+    	$("#log-window").html(messageBody);
 	}
 }
 
@@ -78,8 +91,8 @@ $(function () {
     $("form").on('submit', function (e) {
         e.preventDefault();
     });
-    $( "#disconnect" ).click(function() { disconnect(); });
-    //$( "#join" ).click(function() { joinWithName(); });
+    $("#disconnect").click(function() { disconnect(); });
 	$("#join").click(function() { confirmUsername(); });
+	$("#startRound").click(function() { startRound(); });
 });
 

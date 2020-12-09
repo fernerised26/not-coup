@@ -16,12 +16,14 @@ public class DeckImpl implements Deck {
 
 	@Override
 	public void initialize() throws IOException {
+		deck.clear();
 		Roles[] roles = Roles.values();
 		for (int roleIndex = 0; roleIndex < roles.length; roleIndex++) {
 			for (int i = 0; i < 3; i++) {
 				deck.add(CardCreator.createCard(roles[roleIndex]));
 			}
 		}
+		shuffle();
 	}
 
 	@Override

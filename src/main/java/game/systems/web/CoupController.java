@@ -1,8 +1,12 @@
 package game.systems.web;
 
+import java.io.IOException;
+
 import org.json.simple.JSONObject;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.SendTo;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -11,6 +15,7 @@ import game.systems.Tabletop;
 @RestController
 public class CoupController {
 	
+	public static String SKIP = "SKIP";
 	private Tabletop table = new Tabletop();
 	
 	@SuppressWarnings("unchecked")
@@ -41,10 +46,10 @@ public class CoupController {
 	@MessageMapping("/lobbyjoin")
 	@SendTo("/topic/lobbyevents")
 	public String handlePlayerJoin(String newPlayerName) {
-		if(newPlayerName.length() < 20) {
+		if(newPlayerName.length() < 20 && !table.roundActive) {
 			return table.addPlayer(newPlayerName);
 		} else {
-			return "SKIP";
+			return SKIP;
 		}
 	}
 	
@@ -54,12 +59,32 @@ public class CoupController {
 		if(table.isPlayerPresent(playerName)) {
 			return table.removePlayer(playerName);
 		} else {
-			return "SKIP";
+			return SKIP;
 		}
 	}
 	
+	@SuppressWarnings("unchecked")
 	@MessageMapping("/roundstart")
-	public void startRound() {
-		table.startRound();
+	@SendTo("/topic/lobbyevents")
+	public String startRound() {
+		JSONObject rspObj = new JSONObject();
+		
+		if(table.playerMap.size() < 2) {
+			rspObj.put("code", 4);
+			rspObj.put("msg", "Cannot start, at least 2 players required");
+		} else {
+			try {
+				table.startRound();
+				rspObj.put("code", 200);
+				rspObj.put("msg", "Round started successfully server-side");
+			} catch (IOException e) {
+				rspObj.put("code", 5);
+				rspObj.put("msg", "Invalid player role");
+				return rspObj.toJSONString();
+			}
+		}
+		return rspObj.toJSONString();
 	}
+	
+	
 }
