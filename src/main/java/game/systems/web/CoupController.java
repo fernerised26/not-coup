@@ -5,8 +5,6 @@ import java.io.IOException;
 import org.json.simple.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.messaging.handler.annotation.MessageMapping;
-import org.springframework.messaging.handler.annotation.SendTo;
-import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -16,7 +14,12 @@ import game.systems.Tabletop;
 public class CoupController {
 	
 	public static String SKIP = "SKIP";
-	private Tabletop table = new Tabletop();
+	
+	@Autowired
+	private Tabletop table;
+	
+	@Autowired
+	private TableController tableController;
 	
 	@SuppressWarnings("unchecked")
 	@GetMapping(path = "/airlock", params = "candidateName")
@@ -43,30 +46,24 @@ public class CoupController {
 		return 0;
 	}
 
+	//TODO Probably not necessary until rejoin logic is implemented
 	@MessageMapping("/lobbyjoin")
-	@SendTo("/topic/lobbyevents")
-	public String handlePlayerJoin(String newPlayerName) {
+	public void handlePlayerJoin(String newPlayerName) {
 		if(newPlayerName.length() < 20 && !table.roundActive) {
-			return table.addPlayer(newPlayerName);
-		} else {
-			return SKIP;
-		}
+			table.addPlayer(newPlayerName);
+		} 
 	}
 	
 	@MessageMapping("/lobbyleave")
-	@SendTo("/topic/lobbyevents")
-	public String handlePlayerLeave(String playerName) {
+	public void handlePlayerLeave(String playerName) {
 		if(table.isPlayerPresent(playerName)) {
-			return table.removePlayer(playerName);
-		} else {
-			return SKIP;
+			table.removePlayer(playerName);
 		}
 	}
 	
 	@SuppressWarnings("unchecked")
 	@MessageMapping("/roundstart")
-	@SendTo("/topic/lobbyevents")
-	public String startRound() {
+	public void startRound() {
 		JSONObject rspObj = new JSONObject();
 		
 		if(table.playerMap.size() < 2) {
@@ -80,10 +77,10 @@ public class CoupController {
 			} catch (IOException e) {
 				rspObj.put("code", 5);
 				rspObj.put("msg", "Invalid player role");
-				return rspObj.toJSONString();
+				tableController.notifyTableOfRoundStartAttempt(rspObj.toJSONString());
 			}
 		}
-		return rspObj.toJSONString();
+		tableController.notifyTableOfRoundStartAttempt(rspObj.toJSONString());
 	}
 	
 	

@@ -26,14 +26,15 @@ function setConnected(connected) {
 function connect(playerName) {
     var socket = new SockJS("/coup");
     stompClient = Stomp.over(socket);
+//	stompClient.debug = function(str) {};
     stompClient.connect({}, function (frame) {
         setConnected(true);
         console.log("Connected: " + frame);
         stompClient.subscribe("/topic/lobbyevents", function (message) {
-            reactLobbyEvent(message.body);
+            reactLobbyEvent(message);
         });
 		stompClient.subscribe("/queue/" + playerName, function (message) {
-            reactPersonalEvent(message.body);
+            reactPersonalEvent(message);
         });
     });
 }
@@ -75,16 +76,53 @@ function startRound() {
 	stompClient.send("/app/roundstart", {}, myName);
 }
 
-function reactLobbyEvent(messageBody) {
-	if(message !== "SKIP") {
-    	$("#log-window").html(messageBody);
+function reactLobbyEvent(message) {
+	headerCase = message.headers.case;
+	switch(headerCase){
+		case "playerchange":
+			$("#players").html(message.body);
+			break;
+		case "roundstart":
+			$("#log-window").html(message.body.msg);
+			break;
+		default:
+			console.log("Unknown case");
+			console.log(message);
 	}
 }
 
-function reactPersonalEvent(messageBody){
-	if(message !== "SKIP") {
-    	$("#log-window").html(messageBody);
+function reactPersonalEvent(message){
+	headerCase = message.headers.case;
+	switch(headerCase){
+		case "init":
+			msgBody = message.body;
+			
+			coinCounter = document.createElement("div");
+			newCard1 = document.createElement("div");
+			newCard2 = document.createElement("div");
+			coinCounter.className = "col-md-2 coin-counter";
+			newCard1.className = "col-md-4 card-1";
+			newCard2.className = "col-md-4 card-2";
+			
+			myPlayerSpot = document.getElementById("self-player");
+			fillPlayerBox(coinCounter, newCard1, newCard2);
+		
+			break;
+		default:
+			console.log("Unknown case");
+			console.log(message);
 	}
+}
+
+var playerBumper = document.createElement("div");
+playerBumper.className = "col-md-1";
+
+function fillPlayerBox(playerSpot, coinEle, card1Ele, card2Ele) {
+	playerSpot.appendChild(playerBumper);
+	playerSpot.appendChild(coinEle);
+	playerSpot.appendChild(card1Ele);
+	playerSpot.appendChild(card2Ele);
+	playerSpot.appendChild(playerBumper);
 }
 
 $(function () {
