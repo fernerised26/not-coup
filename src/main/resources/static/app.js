@@ -1,6 +1,12 @@
 var stompClient = null;
 var myName = null;
 
+const twoPlayerDivNames = ["2p1"];
+const threePlayerDivNames = ["3p1", "3p2"];
+const fourPlayerDivNames = ["4p1", "4p2", "4p3"];
+const fivePlayerDivNames = ["5p1", "5p2", "5p3", "5p4"];
+const sixPlayerDivNames = ["6p1", "6p2", "6p3", "6p4", "6p5"];
+
 function enableJoin(){
 	$("#name").prop("disabled", false);
 	$("#join").prop("disabled", false);
@@ -77,7 +83,7 @@ function startRound() {
 }
 
 function reactLobbyEvent(message) {
-	headerCase = message.headers.case;
+	let headerCase = message.headers.case;
 	switch(headerCase){
 		case "playerchange":
 			$("#players").html(message.body);
@@ -92,20 +98,13 @@ function reactLobbyEvent(message) {
 }
 
 function reactPersonalEvent(message){
-	headerCase = message.headers.case;
+	let headerCase = message.headers.case;
 	switch(headerCase){
 		case "init":
-			msgBody = message.body;
+			let msgBody = message.body;
 			
-			coinCounter = document.createElement("div");
-			newCard1 = document.createElement("div");
-			newCard2 = document.createElement("div");
-			coinCounter.className = "col-md-2 coin-counter";
-			newCard1.className = "col-md-4 card-1";
-			newCard2.className = "col-md-4 card-2";
-			
-			myPlayerSpot = document.getElementById("self-player");
-			fillPlayerBox(coinCounter, newCard1, newCard2);
+			let myPlayerSpot = document.getElementById("self-player");
+			initPlayerBox(myPlayerSpot, myName);
 		
 			break;
 		default:
@@ -114,15 +113,33 @@ function reactPersonalEvent(message){
 	}
 }
 
-var playerBumper = document.createElement("div");
+let playerBumper = document.createElement("div");
 playerBumper.className = "col-md-1";
 
-function fillPlayerBox(playerSpot, coinEle, card1Ele, card2Ele) {
-	playerSpot.appendChild(playerBumper);
-	playerSpot.appendChild(coinEle);
-	playerSpot.appendChild(card1Ele);
-	playerSpot.appendChild(card2Ele);
-	playerSpot.appendChild(playerBumper);
+function initPlayerBox(playerSpot, name) {
+	let nameplate = document.createElement("div");
+	nameplate.className = "row nameplate";
+	nameplate.innerHTML = name;
+	
+	let ownedPieces = document.createElement("div");
+	ownedPieces.className = "row owned-pieces";
+	let coinCounter = document.createElement("div");
+	let newCard1 = document.createElement("div");
+	let newCard2 = document.createElement("div");
+	coinCounter.className = "col-md-2 coin-counter";
+	newCard1.className = "col-md-4 card-1";
+	newCard2.className = "col-md-4 card-2";
+	
+	ownedPieces.appendChild(playerBumper);
+	ownedPieces.appendChild(coinCounter);
+	ownedPieces.appendChild(newCard1);
+	ownedPieces.appendChild(newCard2);
+	ownedPieces.appendChild(playerBumper);
+	
+	playerSpot.appendChild(ownedPieces);
+	playerSpot.appendChild(nameplate);
+	
+	return [coinCounter, newCard1, newCard2];
 }
 
 $(function () {

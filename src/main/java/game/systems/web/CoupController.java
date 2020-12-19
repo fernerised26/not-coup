@@ -25,7 +25,10 @@ public class CoupController {
 	@GetMapping(path = "/airlock", params = "candidateName")
 	public String validateNames(String candidateName) {
 		JSONObject rspObj = new JSONObject();
-		if(table.isPlayerPresent(candidateName)) {
+		if(table.roundActive) {
+			rspObj.put("code", 4);
+			rspObj.put("msg", "Round already started, cannot join");
+		} else if(table.isPlayerPresent(candidateName)) {
 			rspObj.put("code", 1);
 			rspObj.put("msg", "Name invalid, already taken: \""+candidateName+"\"");
 		} else if(candidateName.length() > 20) {
@@ -35,8 +38,14 @@ public class CoupController {
 			rspObj.put("code", 3);
 			rspObj.put("msg", "Name too short, must be at least 1 characters");
 		} else {
-			rspObj.put("code", 0);
-			rspObj.put("msg", table.addPlayer(candidateName));
+			String currentPlayerHtml = table.addPlayer(candidateName);
+			if(currentPlayerHtml != null) {
+				rspObj.put("code", 0);
+				rspObj.put("msg", table.addPlayer(candidateName));
+			} else {
+				rspObj.put("code", 4);
+				rspObj.put("msg", "Round already started, cannot join");
+			}
 		}
 		return rspObj.toJSONString();
 	}

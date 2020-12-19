@@ -6,6 +6,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
+import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -20,6 +21,7 @@ public class Tabletop {
 	
 	public boolean roundActive = false;
 	public Map<String, Player> playerMap = new LinkedHashMap<>(); //Linked to maintain a play order
+	public JSONArray orderedPlayerNames;
 	private Deck deck = new DeckImpl();
 	
 	@Autowired
@@ -30,6 +32,9 @@ public class Tabletop {
 	
 	public String addPlayer(String name) {
 		synchronized(playerMap) {
+			if(roundActive) {
+				return null;
+			}
 			playerMap.put(name, new Player(name));
 			String playerListHtml = convertSetToHtml(playerMap.keySet());
 			tableController.notifyTableOfPlayerChange(playerListHtml);
@@ -57,6 +62,7 @@ public class Tabletop {
 				Player currPlayer = playerEntry.getValue();
 				currPlayer.addCardsInit(deck.draw(2));
 				currPlayer.addCoins(2);
+				orderedPlayerNames.add(playerEntry.getKey());
 			}
 			
 			for(Entry<String, Player> playerEntry : playerMap.entrySet()) {
@@ -71,6 +77,7 @@ public class Tabletop {
 	@SuppressWarnings("unchecked")
 	public String getMaskedPlayerMapAsJson(String targetPlayerName) {
 		JSONObject playerMapJsonObj = new JSONObject();
+		playerMapJsonObj.put("order", orderedPlayerNames);
 		for(Entry<String, Player> playerEntry : playerMap.entrySet()) {
 			if(playerEntry.getKey().equals(targetPlayerName)) {
 				playerMapJsonObj.put(targetPlayerName, playerEntry.getValue().getSelf());
