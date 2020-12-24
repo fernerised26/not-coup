@@ -1,0 +1,132 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   xmlns:dc="http://purl.org/dc/elements/1.1/"
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   width="100.52917mm"
+   height="140.52916mm"
+   viewBox="0 0 100.52917 140.52916"
+   version="1.1"
+   id="svg8"
+   inkscape:version="1.0.1 (3bc2e813f5, 2020-09-07)"
+   sodipodi:docname="Card Template v2.svg">
+  <defs
+     id="defs2">
+    <filter
+       inkscape:collect="always"
+       style="color-interpolation-filters:sRGB"
+       id="filter1010"
+       x="-0.032125688"
+       width="1.0642514"
+       y="-0.022438936"
+       height="1.0448779">
+      <feGaussianBlur
+         inkscape:collect="always"
+         stdDeviation="1.2353531"
+         id="feGaussianBlur1012" />
+    </filter>
+  </defs>
+  <sodipodi:namedview
+     id="base"
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     inkscape:pageopacity="0.0"
+     inkscape:pageshadow="2"
+     inkscape:zoom="1.979899"
+     inkscape:cx="190.48617"
+     inkscape:cy="243.20117"
+     inkscape:document-units="mm"
+     inkscape:current-layer="layer3"
+     inkscape:document-rotation="0"
+     showgrid="false"
+     fit-margin-top="0"
+     fit-margin-left="0"
+     fit-margin-right="0"
+     fit-margin-bottom="0"
+     inkscape:window-width="2560"
+     inkscape:window-height="1387"
+     inkscape:window-x="-8"
+     inkscape:window-y="-8"
+     inkscape:window-maximized="1" />
+  <metadata
+     id="metadata5">
+    <rdf:RDF>
+      <cc:Work
+         rdf:about="">
+        <dc:format>image/svg+xml</dc:format>
+        <dc:type
+           rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
+        <dc:title></dc:title>
+      </cc:Work>
+    </rdf:RDF>
+  </metadata>
+  <g
+     inkscape:label="Base Layer"
+     inkscape:groupmode="layer"
+     id="layer1"
+     style="display:inline"
+     transform="translate(-62.290474,-43.58065)">
+    <rect
+       style="fill:#afafaf;fill-opacity:1;stroke:none;stroke-width:0.529167"
+       id="rect833"
+       width="100"
+       height="140"
+       x="62.555058"
+       y="43.845234"
+       ry="2.8348215" />
+  </g>
+  <g
+     inkscape:groupmode="layer"
+     id="layer4"
+     inkscape:label="Platform Underglow">
+    <rect
+       style="display:inline;fill:#c72e2e;fill-opacity:0.2249;stroke:none;stroke-width:0.493859;filter:url(#filter1010)"
+       id="rect833-6-0"
+       width="92.288994"
+       height="132.12959"
+       x="4.1598291"
+       y="4.7252688"
+       ry="2.6754553" />
+  </g>
+  <g
+     inkscape:groupmode="layer"
+     id="layer3"
+     inkscape:label="Platform">
+    <rect
+       style="display:inline;fill:#6b6b6b;fill-opacity:1;stroke:none;stroke-width:0.48206"
+       id="rect833-6"
+       width="89.442848"
+       height="129.89722"
+       x="5.7256966"
+       y="5.7174563"
+       ry="2.6302526" />
+  </g>
+  <g
+     inkscape:groupmode="layer"
+     id="layer2"
+     inkscape:label="Frame"
+     transform="translate(-62.290474,-43.58065)"
+     style="display:inline" />
+  <g
+     inkscape:groupmode="layer"
+     id="layer5"
+     inkscape:label="Card Text"
+     style="display:none">
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-weight:normal;font-size:5.64444px;line-height:1.25;font-family:sans-serif;display:inline;fill:#bf3535;fill-opacity:1;stroke:none;stroke-width:0.264583"
+       x="32.162483"
+       y="14.580353"
+       id="text1018-0"><tspan
+         sodipodi:role="line"
+         id="tspan1016-2"
+         x="32.162483"
+         y="14.580353"
+         style="font-size:5.64444px;fill:#bf3535;fill-opacity:1;stroke-width:0.264583">Lorem Ipsum</tspan></text>
+  </g>
+</svg>
