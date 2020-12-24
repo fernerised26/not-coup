@@ -67,29 +67,51 @@ body {
 
 .owned-pieces {
 	height: 80%;
+	width: 100%;
 	background-color: #66ffff;
 	top: 0px;
+	margin-left:0px;
+	margin-right:0px;
 }
 .coin-counter {
 	height: 100%;
 	background-color: #660000;
 	top: 0px;
+	padding-left:0px;
+	padding-right:0px;
 }
 
 .card-1 {
 	height: 100%;
 	background-color: #004400;
 	top: 0px;
+	padding-left:0px;
+	padding-right:0px;
 }
 
 .card-2 {
 	height: 100%;
 	background-color: #000044;
 	top: 0px;
+	padding-left:0px;
+	padding-right:0px;
 }
 
 .nameplate {
 	height: 20%;
+	width: 100%;
 	background-color: #66aaaa;
 	bottom: 0px;
+	margin-left:0px;
+	margin-right:0px;
+	padding-left:15px;
+	padding-right:15px;
+}
+
+.p-bumper {
+	height: 100%;
+	background-color: #44444400;
+	bottom: 0px;
+	padding-left:0px;
+	padding-right:0px;
 }

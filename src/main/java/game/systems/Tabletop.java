@@ -58,6 +58,7 @@ public class Tabletop {
 		synchronized(playerMap) {
 			roundActive = true;
 			deck.initialize();
+			orderedPlayerNames = new JSONArray();
 			for(Entry<String, Player> playerEntry : playerMap.entrySet()) {
 				Player currPlayer = playerEntry.getValue();
 				currPlayer.addCardsInit(deck.draw(2));
