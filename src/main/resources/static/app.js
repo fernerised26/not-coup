@@ -81,11 +81,6 @@ function confirmUsername(){
 	.body;
 }
 
-//function joinWithName() {
-//	connect();
-//    stompClient.send("/app/lobbyjoin", {}, myName);
-//}
-
 function startRound() {
 	stompClient.send("/app/roundstart", {}, myName);
 }
@@ -123,9 +118,6 @@ function reactPersonalEvent(message){
 	}
 }
 
-let playerBumper = document.createElement("div");
-playerBumper.className = "col-md-1 p-bumper";
-
 function initPlayerBox(playerSpot, name) {
 	let nameplate = document.createElement("div");
 	nameplate.className = "row nameplate";
@@ -133,18 +125,33 @@ function initPlayerBox(playerSpot, name) {
 	
 	let ownedPieces = document.createElement("div");
 	ownedPieces.className = "row owned-pieces";
+	let coinSpot = document.createElement("div");
 	let coinCounter = document.createElement("div");
 	let newCard1 = document.createElement("div");
 	let newCard2 = document.createElement("div");
-	coinCounter.className = "col-md-2 coin-counter";
+	coinSpot.className = "col-md-2 coin-counter";
 	newCard1.className = "col-md-4 card-1";
 	newCard2.className = "col-md-4 card-2";
 	
-	ownedPieces.appendChild(playerBumper);
-	ownedPieces.appendChild(coinCounter);
+	let coinImg = document.createElement("IMG");
+	coinImg.setAttribute("src", "imgs/Coin.svg");
+	coinImg.setAttribute("height", "50%");
+	coinImg.setAttribute("width", "80%");
+	
+	coinSpot.appendChild(coinCounter);
+	coinSpot.appendChild(coinImg);
+	
+	let playerBumper1 = document.createElement("div");
+	playerBumper1.className = "col-md-1 p-bumper";
+	
+	let playerBumper2 = document.createElement("div");
+	playerBumper2.className = "col-md-1 p-bumper";
+	
+	ownedPieces.appendChild(playerBumper1);
+	ownedPieces.appendChild(coinSpot);
 	ownedPieces.appendChild(newCard1);
 	ownedPieces.appendChild(newCard2);
-	ownedPieces.appendChild(playerBumper);
+	ownedPieces.appendChild(playerBumper2);
 	
 	playerSpot.appendChild(ownedPieces);
 	playerSpot.appendChild(nameplate);
