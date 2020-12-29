@@ -2,5 +2,5 @@ package game.pieces;
 
 public enum Roles {
 
-	DUKE, ASSASSIN, CAPTAIN, AMBASSADOR, CONTESSA
+	MOGUL, HITMAN, CAPTAIN, NETOPS, DECOY
 }

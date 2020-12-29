@@ -2,6 +2,7 @@ package game.systems;
 
 import java.io.IOException;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
@@ -11,6 +12,7 @@ import org.json.simple.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
+import game.pieces.Card;
 import game.pieces.Deck;
 import game.pieces.impl.DeckImpl;
 import game.systems.web.PlayerController;
@@ -61,15 +63,24 @@ public class Tabletop {
 			orderedPlayerNames = new JSONArray();
 			for(Entry<String, Player> playerEntry : playerMap.entrySet()) {
 				Player currPlayer = playerEntry.getValue();
-				currPlayer.addCardsInit(deck.draw(2));
+				
+				System.out.println("dealing to "+currPlayer.name);
+				
+				List<Card> cardsDrawn = deck.draw(2);
+				System.out.println("cards drawn: "+cardsDrawn);
+				currPlayer.addCardsInit(cardsDrawn);
 				currPlayer.addCoins(2);
 				orderedPlayerNames.add(playerEntry.getKey());
+				
+				System.out.println("finished dealing "+ currPlayer);
 			}
 			
+//			tableController.notifyTableOfPlayerOrder(orderedPlayerNames.toJSONString());
+			System.out.println(playerMap);
 			for(Entry<String, Player> playerEntry : playerMap.entrySet()) {
 				String currPlayerName = playerEntry.getKey();
 				String maskedPlayerJson = getMaskedPlayerMapAsJson(currPlayerName);
-				playerController.contactPlayerInitTable(currPlayerName, maskedPlayerJson);
+				playerController.contactPlayerInitTable(currPlayerName, orderedPlayerNames.toJSONString(), maskedPlayerJson);
 			}
 			return roundActive;
 		}
@@ -78,12 +89,12 @@ public class Tabletop {
 	@SuppressWarnings("unchecked")
 	public String getMaskedPlayerMapAsJson(String targetPlayerName) {
 		JSONObject playerMapJsonObj = new JSONObject();
-		playerMapJsonObj.put("order", orderedPlayerNames);
 		for(Entry<String, Player> playerEntry : playerMap.entrySet()) {
-			if(playerEntry.getKey().equals(targetPlayerName)) {
-				playerMapJsonObj.put(targetPlayerName, playerEntry.getValue().getSelf());
+			String currPlayerName = playerEntry.getKey();
+			if(currPlayerName.equals(targetPlayerName)) {
+				playerMapJsonObj.put(currPlayerName, playerEntry.getValue().getSelf());
 			} else {
-				playerMapJsonObj.put(targetPlayerName, playerEntry.getValue().getMaskedSelf());
+				playerMapJsonObj.put(currPlayerName, playerEntry.getValue().getMaskedSelf());
 			}
 		}
 		return playerMapJsonObj.toJSONString();

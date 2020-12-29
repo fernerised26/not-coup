@@ -3,11 +3,11 @@ package game.pieces.impl;
 import game.pieces.Card;
 import game.pieces.Roles;
 
-public class CaptainCard extends Card {
+public class MogulCard extends Card {
 
-	public static Roles ROLE = Roles.CAPTAIN;
+	public static Roles ROLE = Roles.MOGUL;
 	
-	private String name = "Captain";
+	private String name = "Mogul";
 
 	public String toString() {
 		return name;

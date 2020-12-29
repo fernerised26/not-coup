@@ -48,7 +48,7 @@ public class Player {
 	public void addCardsInit(List<Card> cardsToAdd) {
 		for(Card card : cardsToAdd) {
 			cardsOwned.add(card);
-			jsonHand.add(card.name);
+			jsonHand.add(card.toString());
 		}
 	}
 	
@@ -61,24 +61,19 @@ public class Player {
 	public void eliminateCardInHand(int indexInHand) {
 		Card cardToFlip = cardsOwned.get(indexInHand);
 		cardToFlip.flipUp();
-		updateMaskedHandForElimination(indexInHand, cardToFlip.name);
+		updateMaskedHandForElimination(indexInHand, cardToFlip.toString());
 	}
 	
 	public String revealCardInHand(int indexInHand) {
 		Card cardToFlip = cardsOwned.get(indexInHand);
-		return cardToFlip.name;
+		return cardToFlip.toString();
 	}
 	
 	public void addCardsViaExchange(List<Card> replacementHand) {
 		cardsOwned = replacementHand;
 		updateJsonHandForExchange(replacementHand);
 	}
-	
-	@Override
-	public String toString() {
-		return "{\"coins\":" + coins + ", \"cardsOwned\":" + JSONArray.toJSONString(cardsOwned) +"}";
-	}
-	
+
 	public JSONObject getSelf() {
 		return jsonSelf;
 	}
@@ -102,12 +97,17 @@ public class Player {
 	private void updateJsonHandForExchange(List<Card> replacementHand) {
 		for(int i=0; i<replacementHand.size(); i++) {
 			Card currReplacementCard = replacementHand.get(i);
-			jsonHand.set(i, currReplacementCard.name);
-			if(currReplacementCard.isFaceUp) {
-				maskedHand.set(i, currReplacementCard.name);
+			jsonHand.set(i, currReplacementCard.toString());
+			if(currReplacementCard.isFaceUp()) {
+				maskedHand.set(i, currReplacementCard.toString());
 			} else {
 				maskedHand.set(i, Card.FACEDOWN);
 			}
 		}
+	}
+	
+	@Override
+	public String toString() {
+		return "Player [name=" + name + ", coins=" + coins + ", cardsOwned=" + cardsOwned + ", roles=" + roles + ", jsonHand=" + jsonHand.toJSONString() + ", maskedHand=" + maskedHand.toJSONString() + "]";
 	}
 }

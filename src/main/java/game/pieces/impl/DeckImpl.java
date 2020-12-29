@@ -16,6 +16,7 @@ public class DeckImpl implements Deck {
 
 	@Override
 	public void initialize() throws IOException {
+//		System.out.println("Deck contents1: "+deck);
 		deck.clear();
 		Roles[] roles = Roles.values();
 		for (int roleIndex = 0; roleIndex < roles.length; roleIndex++) {
@@ -23,7 +24,9 @@ public class DeckImpl implements Deck {
 				deck.add(CardCreator.createCard(roles[roleIndex]));
 			}
 		}
+//		System.out.println("Deck contents2: "+deck);
 		shuffle();
+//		System.out.println("Deck contents3: "+deck);
 	}
 
 	@Override
@@ -43,6 +46,8 @@ public class DeckImpl implements Deck {
 		
 		for(int i=0; i<numOfCards; i++) {
 			Card removedCard = deck.remove(deck.size()-1);
+//			System.out.println("drawing from index:" + (deck.size()-1));
+//			System.out.println("drew card: "+removedCard);
 			returnList.add(removedCard);
 		}
 		

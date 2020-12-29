@@ -1,11 +1,19 @@
 var stompClient = null;
 var myName = null;
+var playerOrder = null;
 
 const twoPlayerDivNames = ["2p1"];
 const threePlayerDivNames = ["3p1", "3p2"];
 const fourPlayerDivNames = ["4p1", "4p2", "4p3"];
 const fivePlayerDivNames = ["5p1", "5p2", "5p3", "5p4"];
 const sixPlayerDivNames = ["6p1", "6p2", "6p3", "6p4", "6p5"];
+
+const captainImgSrc = "imgs/CaptainV3.svg";
+const decoyImgSrc = "imgs/Decoy.svg";
+const hitmanImgSrc = "imgs/Hitman.svg"
+const mogulImgSrc = "imgs/Mogul.svg"
+const netOpsImgSrc = "imgs/NetOps.svg"
+const unrevealedImgSrc = "imgs/Unrevealed.svg"
 
 function enableJoin(){
 	$("#name").prop("disabled", false);
@@ -101,11 +109,13 @@ function reactPersonalEvent(message){
 	let headerCase = message.headers.case;
 	switch(headerCase){
 		case "init":
-			let msgBody = message.body;
+			let tableStarter = JSON.parse(message.body);
 			
 			let myPlayerSpot = document.getElementById("self-player");
-			initPlayerBox(myPlayerSpot, myName);
-		
+			let myPlayerSpotChildren = initPlayerBox(myPlayerSpot, myName);
+			updatePlayerState(myPlayerSpotChildren, tableStarter[myName]);
+			let masterPlayerOrder = JSON.parse(message.headers.order);
+			initPlayers(tableStarter, myName, masterPlayerOrder);
 			break;
 		default:
 			console.log("Unknown case");
@@ -114,7 +124,7 @@ function reactPersonalEvent(message){
 }
 
 let playerBumper = document.createElement("div");
-playerBumper.className = "col-md-1";
+playerBumper.className = "col-md-1 p-bumper";
 
 function initPlayerBox(playerSpot, name) {
 	let nameplate = document.createElement("div");
@@ -139,7 +149,92 @@ function initPlayerBox(playerSpot, name) {
 	playerSpot.appendChild(ownedPieces);
 	playerSpot.appendChild(nameplate);
 	
+	playerSpot.className = "player-cell";
+	
 	return [coinCounter, newCard1, newCard2];
+}
+
+function initPlayers(tableStarter, myName, masterPlayerOrder){
+	playerOrder = [];
+	let myPlayerIndex = masterPlayerOrder.indexOf(myName);
+	
+	let incrementCounter = 0;
+	let activeDivNames = null;
+	switch(masterPlayerOrder.length){
+		case 2:
+			activeDivNames = twoPlayerDivNames;
+			break;
+		case 3:
+			activeDivNames = threePlayerDivNames;
+			break;
+		case 4:
+			activeDivNames = fourPlayerDivNames;
+			break;
+		case 5:
+			activeDivNames = fivePlayerDivNames;
+			break;
+		case 6:
+			activeDivNames = sixPlayerDivNames;
+			break;
+		default:
+			console.log("Invalid player count:"+masterPlayerOrder.length);
+	}
+	console.log("masterPlayerOrder: "+masterPlayerOrder);
+	console.log(activeDivNames);
+	console.log("myPlayerIndex:"+myPlayerIndex);
+		 
+	for(let currPlayerIndex = (myPlayerIndex + 1); currPlayerIndex !== myPlayerIndex; currPlayerIndex++){
+		console.log("currPlayerIndex:"+currPlayerIndex);
+		if(currPlayerIndex === masterPlayerOrder.length){
+			currPlayerIndex = 0;
+		}
+		console.log("currPlayerIndex after check:"+currPlayerIndex);
+		console.log("incrementCounter:"+incrementCounter);
+		
+		let currPlayerSpot = document.getElementById(activeDivNames[incrementCounter]);
+		let currPlayerName = masterPlayerOrder[currPlayerIndex];
+		playerOrder.push(currPlayerName);
+		
+		let currPlayerSpotChildren = initPlayerBox(currPlayerSpot, currPlayerName);
+		updatePlayerState(currPlayerSpotChildren, tableStarter[currPlayerName]);
+				
+		incrementCounter++;
+		console.log("playerOrder:"+playerOrder);
+	}
+	console.log("playerOrder:"+playerOrder);
+}
+
+function updatePlayerState(playerDivChildren, playerObj){
+	playerDivChildren[0].innerHTML = playerObj.coins;
+	let card1Img = document.createElement("IMG");
+	card1Img.setAttribute("src", getCardImageSrc(playerObj.cardsOwned[0]));
+	card1Img.setAttribute("height", "100%");
+	card1Img.setAttribute("width", "100%");
+	let card2Img = document.createElement("IMG");
+	card2Img.setAttribute("src", getCardImageSrc(playerObj.cardsOwned[1]));
+	card2Img.setAttribute("height", "100%");
+	card2Img.setAttribute("width", "100%");
+	playerDivChildren[1].appendChild(card1Img);
+	playerDivChildren[2].appendChild(card2Img);
+}
+
+function getCardImageSrc(cardName){
+	switch(cardName){
+		case "Captain":
+			return captainImgSrc;
+		case "Decoy":
+			return decoyImgSrc;
+		case "Hitman":
+			return hitmanImgSrc;
+		case "Mogul":
+			return mogulImgSrc;
+		case "NetOps":
+			return netOpsImgSrc;
+		case "FACEDOWN":
+			return unrevealedImgSrc;
+		default:
+			console.log("Invalid Card Name:"+cardName);
+	}
 }
 
 $(function () {

@@ -3,8 +3,7 @@ package game.pieces;
 public abstract class Card {
 
 	public static String FACEDOWN = "FACEDOWN";
-	public boolean isFaceUp = false;
-	public String name;
+	private boolean isFaceUp = false;
 	
 	public void flipUp() {
 		isFaceUp = true;
@@ -12,5 +11,9 @@ public abstract class Card {
 	
 	public void flipDown() {
 		isFaceUp = false;
+	}
+
+	public boolean isFaceUp() {
+		return isFaceUp;
 	}
 }
