@@ -13,20 +13,21 @@ import game.pieces.Roles;
 
 public class Player {
 
-	public String name;
-	public int coins = 0;
-	public List<Card> cardsOwned = new ArrayList<>();
-	
+	private String name;
+	private int coins = 0;
+	private List<Card> cardsOwned = new ArrayList<>();
 	private Set<Roles> roles = new HashSet<>();
 	private JSONArray jsonHand;
 	private JSONObject jsonSelf;
 	private JSONArray maskedHand;
 	private JSONObject maskedSelf;
+	private String secret;
 	
 	@SuppressWarnings("unchecked")
-	public Player(String name) {
+	public Player(String name, String secret) {
 		super();
 		this.name = name;
+		this.secret = secret;
 		JSONArray tempMaskedHand = new JSONArray();
 		tempMaskedHand.add(Card.FACEDOWN);
 		tempMaskedHand.add(Card.FACEDOWN);
@@ -73,13 +74,9 @@ public class Player {
 		cardsOwned = replacementHand;
 		updateJsonHandForExchange(replacementHand);
 	}
-
-	public JSONObject getSelf() {
-		return jsonSelf;
-	}
 	
-	public JSONObject getMaskedSelf() {
-		return maskedSelf;
+	public boolean isSecret(String presentedSecret) {
+		return secret.equals(presentedSecret);
 	}
 	
 	@SuppressWarnings("unchecked")
@@ -109,5 +106,29 @@ public class Player {
 	@Override
 	public String toString() {
 		return "Player [name=" + name + ", coins=" + coins + ", cardsOwned=" + cardsOwned + ", roles=" + roles + ", jsonHand=" + jsonHand.toJSONString() + ", maskedHand=" + maskedHand.toJSONString() + "]";
+	}
+
+	public String getName() {
+		return name;
+	}
+
+	public int getCoins() {
+		return coins;
+	}
+
+	public List<Card> getCardsOwned() {
+		return cardsOwned;
+	}
+
+	public Set<Roles> getRoles() {
+		return roles;
+	}
+	
+	public JSONObject getSelf() {
+		return jsonSelf;
+	}
+	
+	public JSONObject getMaskedSelf() {
+		return maskedSelf;
 	}
 }

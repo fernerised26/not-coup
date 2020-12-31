@@ -1,10 +1,16 @@
 package game.systems.web;
 
 import java.io.IOException;
+import java.security.NoSuchAlgorithmException;
+import java.util.Map;
+
+import javax.servlet.http.HttpServletRequest;
 
 import org.json.simple.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.messaging.handler.annotation.Headers;
 import org.springframework.messaging.handler.annotation.MessageMapping;
+import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -23,9 +29,11 @@ public class CoupController {
 	
 	@SuppressWarnings("unchecked")
 	@GetMapping(path = "/airlock", params = "candidateName")
-	public String validateNames(String candidateName) {
+	public String validateNames(String candidateName, HttpServletRequest rqst) {
+		System.out.println(rqst == null);
+		System.out.println(rqst.getUserPrincipal());
 		JSONObject rspObj = new JSONObject();
-		if(table.roundActive) {
+		if(table.isRoundActive()) {
 			rspObj.put("code", 4);
 			rspObj.put("msg", "Round already started, cannot join");
 		} else if(table.isPlayerPresent(candidateName)) {
@@ -38,10 +46,20 @@ public class CoupController {
 			rspObj.put("code", 3);
 			rspObj.put("msg", "Name too short, must be at least 1 characters");
 		} else {
-			String currentPlayerHtml = table.addPlayer(candidateName);
+			String secret;
+			try {
+				secret = SecretUtil.generateSecret();
+			} catch (NoSuchAlgorithmException e) {
+				rspObj.put("code", 6);
+				rspObj.put("msg", "Unable to generate secret");
+				return rspObj.toJSONString();
+			}
+			
+			String currentPlayerHtml = table.addPlayer(candidateName, secret);
 			if(currentPlayerHtml != null) {
 				rspObj.put("code", 0);
-				rspObj.put("msg", table.addPlayer(candidateName));
+				rspObj.put("msg", currentPlayerHtml);
+				rspObj.put("secret", secret);
 			} else {
 				rspObj.put("code", 4);
 				rspObj.put("msg", "Round already started, cannot join");
@@ -56,12 +74,12 @@ public class CoupController {
 	}
 
 	//TODO Probably not necessary until rejoin logic is implemented
-	@MessageMapping("/lobbyjoin")
-	public void handlePlayerJoin(String newPlayerName) {
-		if(newPlayerName.length() < 20 && !table.roundActive) {
-			table.addPlayer(newPlayerName);
-		} 
-	}
+//	@MessageMapping("/lobbyjoin")
+//	public void handlePlayerJoin(String newPlayerName) {
+//		if(newPlayerName.length() < 20 && !table.isRoundActive()) {
+//			table.addPlayer(newPlayerName);
+//		} 
+//	}
 	
 	@MessageMapping("/lobbyleave")
 	public void handlePlayerLeave(String playerName) {
@@ -75,7 +93,7 @@ public class CoupController {
 	public void startRound() {
 		JSONObject rspObj = new JSONObject();
 		
-		if(table.playerMap.size() < 2) {
+		if(table.getPlayerMap().size() < 2) {
 			rspObj.put("code", 4);
 			rspObj.put("msg", "Cannot start, at least 2 players required");
 		} else {
@@ -92,5 +110,15 @@ public class CoupController {
 		tableController.notifyTableOfRoundStartAttempt(rspObj.toJSONString());
 	}
 	
-	
+	@MessageMapping("/gameaction")
+	public void handlePlayerGameAction(
+				@Payload String body,
+				@Headers Map<String, String> headers,
+				java.security.Principal principal
+			) {
+		System.out.println("Handling a game action");
+		System.out.println("Body: " + body);
+		System.out.println("Headers: " + headers.toString());
+		System.out.println(principal.toString());
+	}
 }

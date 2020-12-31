@@ -53,7 +53,9 @@ body {
 }
 
 .tabletop-row {
+	width: 100%;
 	height: 20%;
+	margin-left:0px;
 }
 
 .player-cell {
@@ -113,7 +115,7 @@ body {
 	margin-right:0px;
 	padding-left:15px;
 	padding-right:15px;
-	font-family: 'Major Mono Display', monospace;
+	font-family: 'Audiowide', cursive;
 	font-size: 100%;
 	font-weight: 900;
 	color: #00ff00;
@@ -126,6 +128,41 @@ body {
 	height: 100%;
 	background-color: #44444400;
 	bottom: 0px;
-	padding-left:0px;
-	padding-right:0px;
+	padding-left: 0px;
+	padding-right: 0px;
+}
+
+.btn-col {
+	padding-left: 0px;
+	padding-right: 0px;
+	height: 100%;
+}
+
+.act-btn {
+	padding-left:5px;
+	padding-right:5px;
+	margin-top:3px;
+	margin-bottom:3px;
+	color: #00ff00;
+	font-family: 'Share Tech Mono', monospace;
+	background-color: #000000;
+}
+
+.tooltip-wrapper {
+  display: inline-block; /* display: block works as well */
+  margin: 0px; /* make some space so the tooltip is visible */
+}
+
+.tooltip-wrapper .btn[disabled] {
+  /* don't let button block mouse events from reaching wrapper */
+  pointer-events: none;
+}
+
+.tooltip-wrapper.disabled {
+  /* OPTIONAL pointer-events setting above blocks cursor setting, so set it here */
+  cursor: not-allowed;
+}
+
+#gameaction7 {
+	height: 95%;
 }

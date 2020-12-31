@@ -21,10 +21,11 @@ import game.systems.web.TableController;
 @Component
 public class Tabletop {
 	
-	public boolean roundActive = false;
-	public Map<String, Player> playerMap = new LinkedHashMap<>(); //Linked to maintain a play order
-	public JSONArray orderedPlayerNames;
+	private boolean roundActive = false;
+	private Map<String, Player> playerMap = new LinkedHashMap<>(); //Linked to maintain a play order
+	private JSONArray orderedPlayerNames;
 	private Deck deck = new DeckImpl();
+	private Player currActivePlayer = null;
 	
 	@Autowired
 	private PlayerController playerController;
@@ -32,12 +33,12 @@ public class Tabletop {
 	@Autowired
 	private TableController tableController;
 	
-	public String addPlayer(String name) {
+	public String addPlayer(String name, String secret) {
 		synchronized(playerMap) {
 			if(roundActive) {
 				return null;
 			}
-			playerMap.put(name, new Player(name));
+			playerMap.put(name, new Player(name, secret));
 			String playerListHtml = convertSetToHtml(playerMap.keySet());
 			tableController.notifyTableOfPlayerChange(playerListHtml);
 			return playerListHtml;
@@ -46,9 +47,11 @@ public class Tabletop {
 	
 	public void removePlayer(String name) {
 		synchronized(playerMap) {
-			playerMap.remove(name);
-			String playerListHtml = convertSetToHtml(playerMap.keySet());
-			tableController.notifyTableOfPlayerChange(playerListHtml);
+			if(roundActive) {
+				playerMap.remove(name);
+				String playerListHtml = convertSetToHtml(playerMap.keySet());
+				tableController.notifyTableOfPlayerChange(playerListHtml);
+			}
 		}
 	}
 	
@@ -64,24 +67,27 @@ public class Tabletop {
 			for(Entry<String, Player> playerEntry : playerMap.entrySet()) {
 				Player currPlayer = playerEntry.getValue();
 				
-				System.out.println("dealing to "+currPlayer.name);
+//				System.out.println("dealing to "+currPlayer.name);
 				
 				List<Card> cardsDrawn = deck.draw(2);
-				System.out.println("cards drawn: "+cardsDrawn);
+//				System.out.println("cards drawn: "+cardsDrawn);
 				currPlayer.addCardsInit(cardsDrawn);
 				currPlayer.addCoins(2);
 				orderedPlayerNames.add(playerEntry.getKey());
 				
-				System.out.println("finished dealing "+ currPlayer);
+//				System.out.println("finished dealing "+ currPlayer);
 			}
 			
-//			tableController.notifyTableOfPlayerOrder(orderedPlayerNames.toJSONString());
-			System.out.println(playerMap);
+//			System.out.println(playerMap);
 			for(Entry<String, Player> playerEntry : playerMap.entrySet()) {
 				String currPlayerName = playerEntry.getKey();
 				String maskedPlayerJson = getMaskedPlayerMapAsJson(currPlayerName);
 				playerController.contactPlayerInitTable(currPlayerName, orderedPlayerNames.toJSONString(), maskedPlayerJson);
 			}
+			
+			currActivePlayer = playerMap.get(orderedPlayerNames.get(0));
+			tableController.notifyTableOfCurrentActivePlayer(currActivePlayer.getName());
+			
 			return roundActive;
 		}
 	}
@@ -100,6 +106,18 @@ public class Tabletop {
 		return playerMapJsonObj.toJSONString();
 	}
 	
+	public boolean isRoundActive() {
+		return roundActive;
+	}
+
+	public Map<String, Player> getPlayerMap() {
+		return playerMap;
+	}
+	
+	public Player getCurrActivePlayer() {
+		return currActivePlayer;
+	}
+
 	private String convertSetToHtml(Set<String> playerSet) {
 		StringBuilder sb = new StringBuilder();
 		for(String player : playerSet) {

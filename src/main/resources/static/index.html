@@ -5,12 +5,14 @@
     <link href="/webjars/bootstrap/css/bootstrap.min.css" rel="stylesheet">
     <link rel="preconnect" href="https://fonts.gstatic.com">
 	<link href="https://fonts.googleapis.com/css2?family=Major+Mono+Display&display=swap" rel="stylesheet">
+	<link href="https://fonts.googleapis.com/css2?family=Audiowide&family=Major+Mono+Display&display=swap" rel="stylesheet"> 
 	<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap" rel="stylesheet"> 
-    <link href="/main.css" rel="stylesheet">
     <script src="/webjars/jquery/jquery.min.js"></script>
+    <script src="/webjars/jquery-ui/jquery-ui.min.js"></script>
     <script src="/webjars/sockjs-client/sockjs.min.js"></script>
     <script src="/webjars/stomp-websocket/stomp.min.js"></script>
     <script src="/app.js"></script>
+    <link href="/main.css" rel="stylesheet">
 </head>
 <body>
 <noscript><h2 style="color: #ff0000">Seems your browser doesn't support Javascript! Websocket relies on Javascript being
@@ -85,12 +87,38 @@
             	</div>
             	<div id="ttrow5" class="row tabletop-row">
             		<div id="cell-5-1" class="col-md-4 player-col left-player-col">
+            			<div class="col-md-2 btn-col">
+							<button id="payday" type="submit" class="btn act-btn" title="Add 1 coin" disabled>+$1</button>
+            				<button id="crowdfund" type="submit" class="btn act-btn" title="Add 2 coins, may be countered by a Mogul">+$2</button>
+            			</div>
+            			<div class="col-md-3 btn-col">
+            				<button id="printmoney" type="submit" class="btn act-btn" title="I'm a tooltip">Print<br/>Money</button>
+            				<button id="refer" type="submit" class="btn act-btn" title="I'm a tooltip">Refer</button>
+            			</div>
+            			<div class="col-md-3 btn-col">
+            				<button id="gameaction5" type="submit" class="btn act-btn" disabled>Order<br/>Hit</button>
+            				<button id="gameaction6" type="submit" class="btn act-btn">Raid</button>
+            			</div>
+            			<div class="col-md-4 btn-col">
+            				<button id="gameaction7" type="submit" class="btn btn-lg act-btn">Void</button>
+            			</div>
 	            	</div>
 	            	<div id="cell-5-2" class="col-md-4 player-col center-player-col">
 	            		<div id="self-player">	
 	            		</div>
 	            	</div>
 	            	<div id="cell-5-3" class="col-md-4 player-col right-player-col">
+	            		<div class="col-md-2 btn-col">
+            				<button id="gameaction8" type="submit" class="btn act-btn">gameaction8</button>
+            				<button id="gameaction9" type="submit" class="btn act-btn">gameaction9</button>
+            			</div>
+            			<div class="col-md-3 btn-col">
+            				<button id="gameaction10" type="submit" class="btn act-btn">gameaction10</button>
+            				<button id="gameaction11" type="submit" class="btn act-btn">gameaction11</button>
+            			</div>
+            			<div class="col-md-3 btn-col">
+            				<button id="gameaction12" type="submit" class="btn act-btn">gameaction12</button>
+            			</div>
 	            	</div>
             	</div>
             </div>

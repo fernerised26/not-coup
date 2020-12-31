@@ -1,6 +1,7 @@
 var stompClient = null;
 var myName = null;
 var playerOrder = null;
+var mySecret = null;
 
 const twoPlayerDivNames = ["2p1"];
 const threePlayerDivNames = ["3p1", "3p2"];
@@ -72,6 +73,7 @@ function confirmUsername(){
     			myName = candidateName;
 				$.get("/lobby");
 				$("#players").html(rsp.msg);
+				mySecret = rsp.secret;
 				connect(myName);
 			} else {
 				$("#players").html(rsp.msg);
@@ -105,7 +107,6 @@ function reactPersonalEvent(message){
 	switch(headerCase){
 		case "init":
 			let tableStarter = JSON.parse(message.body);
-			
 			let myPlayerSpot = document.getElementById("self-player");
 			let myPlayerSpotChildren = initPlayerBox(myPlayerSpot, myName);
 			updatePlayerState(myPlayerSpotChildren, tableStarter[myName]);
@@ -244,6 +245,10 @@ function getCardImageSrc(cardName){
 	}
 }
 
+function dummyGameAction() {
+	stompClient.send("/app/gameaction", {}, myName);
+}
+
 $(function () {
     $("form").on('submit', function (e) {
         e.preventDefault();
@@ -251,5 +256,6 @@ $(function () {
     $("#disconnect").click(function() { disconnect(); });
 	$("#join").click(function() { confirmUsername(); });
 	$("#startRound").click(function() { startRound(); });
+	$("#gameaction").click(function() { dummyGameAction(); });
 });
 
