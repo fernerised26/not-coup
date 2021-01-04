@@ -1,9 +1,0 @@
-server:
-  port: 8443
-  ssl:
-    enabled: true
-    key-store-type: PKCS12
-    key-store: "classpath:highlander.p12"
-    key-store-password: "feel78frivolous-GOURD-"
-    key-alias: highlander
-
