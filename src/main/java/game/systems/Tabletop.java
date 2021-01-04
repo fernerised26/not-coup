@@ -79,21 +79,20 @@ public class Tabletop {
 			}
 			
 //			System.out.println(playerMap);
+			currActivePlayer = playerMap.get(orderedPlayerNames.get(0));
+			JSONObject returnObj = new JSONObject();
+			returnObj.put("activePlayer", currActivePlayer.getName());
 			for(Entry<String, Player> playerEntry : playerMap.entrySet()) {
 				String currPlayerName = playerEntry.getKey();
-				String maskedPlayerJson = getMaskedPlayerMapAsJson(currPlayerName);
-				playerController.contactPlayerInitTable(currPlayerName, orderedPlayerNames.toJSONString(), maskedPlayerJson);
-			}
-			
-			currActivePlayer = playerMap.get(orderedPlayerNames.get(0));
-			tableController.notifyTableOfCurrentActivePlayer(currActivePlayer.getName());
-			
+				JSONObject maskedPlayerJson = getMaskedPlayerMapAsJson(currPlayerName);
+				returnObj.put("boardState", maskedPlayerJson);
+				playerController.contactPlayerInitTable(currPlayerName, orderedPlayerNames.toJSONString(), returnObj.toJSONString());
+			}			
 			return roundActive;
 		}
 	}
 	
-	@SuppressWarnings("unchecked")
-	public String getMaskedPlayerMapAsJson(String targetPlayerName) {
+	public JSONObject getMaskedPlayerMapAsJson(String targetPlayerName) {
 		JSONObject playerMapJsonObj = new JSONObject();
 		for(Entry<String, Player> playerEntry : playerMap.entrySet()) {
 			String currPlayerName = playerEntry.getKey();
@@ -103,7 +102,7 @@ public class Tabletop {
 				playerMapJsonObj.put(currPlayerName, playerEntry.getValue().getMaskedSelf());
 			}
 		}
-		return playerMapJsonObj.toJSONString();
+		return playerMapJsonObj;
 	}
 	
 	public boolean isRoundActive() {
@@ -116,6 +115,42 @@ public class Tabletop {
 	
 	public Player getCurrActivePlayer() {
 		return currActivePlayer;
+	}
+	
+	public boolean isActivePlayer(String secret, String playerName) {
+		return (currActivePlayer.getName().equals(playerName)
+				&& currActivePlayer.isSecret(secret));
+	}
+	
+	public boolean isSecretCorrect(String secret, String playerName) {
+		return playerMap.get(playerName).isSecret(secret);
+	}
+	
+	public void handlePayday() {
+		currActivePlayer.addCoins(1);
+		advanceActivePlayer();
+		
+		JSONObject returnObj = new JSONObject();
+		returnObj.put("activePlayer", currActivePlayer.getName());
+		for(Entry<String, Player> playerEntry : playerMap.entrySet()) {
+			String currPlayerName = playerEntry.getKey();
+			JSONObject maskedPlayerJson = getMaskedPlayerMapAsJson(currPlayerName);
+			returnObj.put("boardState", maskedPlayerJson);
+			playerController.contactPlayerUpdateTable(currPlayerName, returnObj.toJSONString());
+		}
+	}
+	
+	private void advanceActivePlayer() {
+		System.out.println("Advancing player");
+		System.out.println(playerMap);
+		System.out.println(orderedPlayerNames);
+		int currActiveIndex = orderedPlayerNames.indexOf(currActivePlayer.getName());
+		System.out.println("currActiveIndex: "+currActiveIndex);
+		int newActiveIndex = (currActiveIndex + 1) == orderedPlayerNames.size() ? 0 : (currActiveIndex + 1);
+		System.out.println("newActiveIndex: "+newActiveIndex);
+		System.out.println("active name 1: " + currActivePlayer.getName());
+		currActivePlayer = playerMap.get(orderedPlayerNames.get(newActiveIndex));
+		System.out.println("active name 1: " + currActivePlayer.getName());
 	}
 
 	private String convertSetToHtml(Set<String> playerSet) {

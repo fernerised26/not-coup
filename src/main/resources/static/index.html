@@ -23,7 +23,7 @@
         <div class="col-md-12">
             <form class="form-inline">
                 <div class="form-group">
-                    <label for="name">Alias: </label>
+                    <label id="name-label" for="name">Alias: </label>
                     <input type="text" id="name" class="form-control namePrompt" placeholder="Your name here...">
                 </div>
                 <button id="join" class="btn btn-default" type="submit">Join/Connect</button>
@@ -35,93 +35,97 @@
     <div class="row" id="spacer">
     </div>
     
-    <div class="row">
-    	<div class="col-md-9">
-            <div id="tabletop">
-            	<div id="ttrow1" class="row tabletop-row">
-	            	<div id="cell-1-1" class="col-md-4 player-col left-player-col">
-	            		<div id="3p1"></div>
-	            		<div id="5p2"></div>
-	            	</div>
-	            	<div id="cell-2-1" class="col-md-4 player-col center-player-col">
-	            		<div id="2p1"></div>
-	            		<div id="4p2"></div>
-	            		<div id="6p3"></div>
-	            	</div>
-	            	<div id="cell-3-1" class="col-md-4 player-col right-player-col">
-	            		<div id="3p2"></div>
-	            		<div id="5p3"></div>
-	            	</div>
+    <div id="game-info" class="row">
+    	<div id="tabletop" class="col-md-9">
+           	<div id="ttrow1" class="row tabletop-row">
+            	<div id="cell-1-1" class="col-md-4 player-col left-player-col">
+            		<div id="3p1"></div>
+            		<div id="5p2"></div>
             	</div>
-            	<div id="ttrow2" class="row tabletop-row">
-            		<div id="cell-1-2" class="col-md-4 player-col left-player-col">
-            			<div id="6p2"></div>
-	            	</div>
-	            	<div id="cell-2-2" class="col-md-4 player-col center-player-col">
-	            	</div>
-	            	<div id="cell-3-2" class="col-md-4 player-col right-player-col">
-	            		<div id="6p4"></div>
-	            	</div>
+            	<div id="cell-2-1" class="col-md-4 player-col center-player-col">
+            		<div id="2p1"></div>
+            		<div id="4p2"></div>
+            		<div id="6p3"></div>
             	</div>
-            	<div id="ttrow3" class="row tabletop-row">
-            		<div id="cell-1-3" class="col-md-4 player-col left-player-col">
-            			<div id="4p1"></div>
-            			<div id="5p1"></div>
-	            	</div>
-	            	<div id="cell-2-3" class="col-md-4 player-col center-player-col">
-	            	</div>
-	            	<div id="cell-3-3" class="col-md-4 player-col right-player-col">
-	            		<div id="4p3"></div>
-	            		<div id="5p4"></div>
-	            	</div>
+            	<div id="cell-3-1" class="col-md-4 player-col right-player-col">
+            		<div id="3p2"></div>
+            		<div id="5p3"></div>
             	</div>
-            	<div id="ttrow4" class="row tabletop-row">
-            		<div id="cell-4-1" class="col-md-4 player-col left-player-col">
-            			<div id="6p1"></div>
-	            	</div>
-	            	<div id="cell-4-2" class="col-md-4 player-col center-player-col">
-	            	</div>
-	            	<div id="cell-4-3" class="col-md-4 player-col right-player-col">
-	            		<div id="6p5"></div>
-	            	</div>
+           	</div>
+           	<div id="ttrow2" class="row tabletop-row">
+           		<div id="cell-1-2" class="col-md-4 player-col left-player-col">
+           			<div id="6p2"></div>
             	</div>
-            	<div id="ttrow5" class="row tabletop-row">
-            		<div id="cell-5-1" class="col-md-4 player-col left-player-col">
-            			<div class="col-md-2 btn-col">
-							<button id="payday" type="submit" class="btn act-btn" title="Add 1 coin" disabled>+$1</button>
-            				<button id="crowdfund" type="submit" class="btn act-btn" title="Add 2 coins, may be countered by a Mogul">+$2</button>
-            			</div>
-            			<div class="col-md-3 btn-col">
-            				<button id="printmoney" type="submit" class="btn act-btn" title="I'm a tooltip">Print<br/>Money</button>
-            				<button id="refer" type="submit" class="btn act-btn" title="I'm a tooltip">Refer</button>
-            			</div>
-            			<div class="col-md-3 btn-col">
-            				<button id="gameaction5" type="submit" class="btn act-btn" disabled>Order<br/>Hit</button>
-            				<button id="gameaction6" type="submit" class="btn act-btn">Raid</button>
-            			</div>
-            			<div class="col-md-4 btn-col">
-            				<button id="gameaction7" type="submit" class="btn btn-lg act-btn">Void</button>
-            			</div>
-	            	</div>
-	            	<div id="cell-5-2" class="col-md-4 player-col center-player-col">
-	            		<div id="self-player">	
-	            		</div>
-	            	</div>
-	            	<div id="cell-5-3" class="col-md-4 player-col right-player-col">
-	            		<div class="col-md-2 btn-col">
-            				<button id="gameaction8" type="submit" class="btn act-btn">gameaction8</button>
-            				<button id="gameaction9" type="submit" class="btn act-btn">gameaction9</button>
-            			</div>
-            			<div class="col-md-3 btn-col">
-            				<button id="gameaction10" type="submit" class="btn act-btn">gameaction10</button>
-            				<button id="gameaction11" type="submit" class="btn act-btn">gameaction11</button>
-            			</div>
-            			<div class="col-md-3 btn-col">
-            				<button id="gameaction12" type="submit" class="btn act-btn">gameaction12</button>
-            			</div>
-	            	</div>
+            	<div id="cell-2-2" class="col-md-4 player-col center-player-col">
             	</div>
-            </div>
+            	<div id="cell-3-2" class="col-md-4 player-col right-player-col">
+            		<div id="6p4"></div>
+            	</div>
+           	</div>
+           	<div id="ttrow3" class="row tabletop-row">
+           		<div id="cell-1-3" class="col-md-4 player-col left-player-col">
+           			<div id="4p1"></div>
+           			<div id="5p1"></div>
+            	</div>
+            	<div id="cell-2-3" class="col-md-4 player-col center-player-col">
+            	</div>
+            	<div id="cell-3-3" class="col-md-4 player-col right-player-col">
+            		<div id="4p3"></div>
+            		<div id="5p4"></div>
+            	</div>
+           	</div>
+           	<div id="ttrow4" class="row tabletop-row">
+           		<div id="cell-4-1" class="col-md-4 player-col left-player-col">
+           			<div id="6p1"></div>
+            	</div>
+            	<div id="cell-4-2" class="col-md-4 player-col center-player-col">
+            	</div>
+            	<div id="cell-4-3" class="col-md-4 player-col right-player-col">
+            		<div id="6p5"></div>
+            	</div>
+           	</div>
+           	<div id="ttrow5" class="row tabletop-row">
+           		<div id="cell-5-1" class="col-md-4 player-col left-player-col">
+           			<div class="col-md-3 btn-col">
+						<button id="payday" type="submit" class="btn act-btn" title="Add 1 coin, cannot be countered" disabled>Payday<br/>+$1</button>
+           				<button id="crowdfund" type="submit" class="btn act-btn" title="Add 2 coins, may be countered by a Mogul" disabled>Crowdfund<br/>+$2</button>
+           			</div>
+           			<div class="col-md-3 btn-col">
+           				<button id="printmoney" type="submit" class="btn act-btn" title="[Mogul] Add 3 coins" disabled>Print<br/>Money</button>
+           				<button id="scramble" type="submit" class="btn act-btn" title="[NetOps] Draw 2 cards&#10;Choose 2 of the 4 to keep&#10;Shuffle the other 2 back into the deck" disabled>Scramble<br/>Identity</button>
+           			</div>
+           			<div class="col-md-3 btn-col">
+           				<button id="assassinate" type="submit" class="btn act-btn" title="[Hitman] Costs $3, choose a player&#10;Chosen player reveals and lose 1 of their cards&#10;May be countered by a Decoy" disabled>Order<br/>Hit</button>
+           				<button id="raid" type="submit" class="btn act-btn" title="[Captain] Choose a player&#10;Take up to 2 coins from the chosen player&#10;May be countered by a NetOps or Captain" disabled>Raid</button>
+           			</div>
+           			<div class="col-md-3 btn-col">
+           				<button id="void" type="submit" class="btn act-btn" title="Costs $10, Choose a player&#10;Chosen player reveals and lose 1 of their cards&#10;Cannot be countered&#10;Forced if you start the turn with $10 or more" disabled>Void</button>
+           			</div>
+            	</div>
+            	<div id="cell-5-2" class="col-md-4 player-col center-player-col">
+            		<div id="self-player">
+<!-- 						<div class="row owned-pieces"> class="player-cell" --> 
+<!-- 							<div class="col-md-1 p-bumper"></div> -->
+<!-- 							<div class="col-md-2 coin-counter"> -->
+<!-- 								<div id="coins" class="counter" >10</div> -->
+<!-- 								<img class="coinpic" src="imgs/Coin.svg" height="50%" width="100%"/> -->
+<!-- 							</div>  -->
+<!-- 							<div class="col-md-4 card-1"> -->
+<!-- 								<img src="imgs/CaptainV3.svg" alt="Allows stealing and protecting" height="100%" width="100%"/> -->
+<!-- 							</div> -->
+<!-- 							<div class="col-md-4 card-2"> -->
+<!-- 								<img src="imgs/Mogul.svg" alt="Allows stealing and protecting" height="100%" width="100%"/> -->
+<!-- 							</div> -->
+<!-- 							<div class="col-md-1 p-bumper"></div> -->
+<!-- 						</div> -->
+<!-- 						<div class="row nameplate">derpman2</div> -->
+					</div>
+            	</div>
+            	<div id="cell-5-3" class="col-md-4 player-col right-player-col">
+            		<button id="testbutton" type="submit" class="btn btn-default">I'm a test</button>
+            		<button id="teardown" type="submit" class="btn btn-default">teardown</button>
+            	</div>
+           	</div>
         </div>
     	<div class="col-md-3">
     		<button id="startRound" class="btn btn-default" type="submit">Start Game</button>

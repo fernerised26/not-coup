@@ -1,12 +1,13 @@
 body {
     background-color: #000;
+    font-size: 100%;
 }
 
 #main-content {
     max-width: 1200px;
-    min-width: 900px;
-    height: 800px;
-    padding: 2em 3em;
+    min-width: 1200px;
+    height: 700px;
+    padding: 2em;
     margin: 0 auto 20px;
     background-color: #bdbdbd;
     border: 1px solid #e5e5e5;
@@ -15,12 +16,18 @@ body {
     border-radius: 5px;
 }
 
+#game-info {
+	max-width: 1200px;
+    min-width: 1150px;
+}
+
 #name {
 	max-width: 250px;
 }
 
 #player-list {
 	max-width: 250px;
+	font-size: 2em;
 }
 
 #log-window {
@@ -34,7 +41,7 @@ body {
 
 #tabletop {
 	max-width: 850px;
-	min-width: 600px;
+	min-width: 850px;
 	height: 600px;
 	background-color: #666666;
 	border: 1px solid #000;
@@ -64,19 +71,21 @@ body {
 	height: 100%;
  	background-color: #ffffff00; 
 	bottom: 0px;
+	border: 2px solid #000000;
 }
 
 .owned-pieces {
 	height: 80%;
 	width: 100%;
-	background-color: #554eabff;
+/* 	background-color: #554eabff; */
+	background-image: repeating-linear-gradient(180deg, black, #666666);
 	top: 0px;
 	margin-left:0px;
 	margin-right:0px;
-	border: 3px solid #000000;
-	border-radius: 5px;
+	border: 0px solid #000000;
+/* 	border-radius: 5px; */
 }
-.coin-counter {
+.coins {
 	height: 100%;
 	background-color: #66000000;
 	top: 0px;
@@ -87,21 +96,22 @@ body {
 	font-weight: 900;
 	text-align: center;
 	vertical-align: middle;
-	color: black;
+	color: #e3dc00ff;
+	text-shadow: 1px 1px #000000;
 }
 
 .card-1 {
-	height: 100%;
+	height: 95%;
 	background-color: #00440000;
-	top: 0px;
+	top: 3px;
 	padding-left:0px;
 	padding-right:0px;
 }
 
 .card-2 {
-	height: 100%;
+	height: 95%;
 	background-color: #00004400;
-	top: 0px;
+	top: 3px;
 	padding-left:0px;
 	padding-right:0px;
 }
@@ -109,19 +119,21 @@ body {
 .nameplate {
 	height: 20%;
 	width: 100%;
-	background-color: #000000;
+/* 	background-color: #000000; */
+	background-image: repeating-linear-gradient(180deg, #666666, black);
 	bottom: 0px;
 	margin-left:0px;
 	margin-right:0px;
 	padding-left:15px;
 	padding-right:15px;
+	padding-top:1px;
+	padding-bottom:1px;
 	font-family: 'Audiowide', cursive;
-	font-size: 100%;
-	font-weight: 900;
+	font-size: 150%;
+/* 	font-weight: 500; */
 	color: #00ff00;
 	text-shadow: 1px 1px #058f05ff;
-	border: 3px solid #000000;
-	border-radius: 5px;
+	border: 0px solid #000000;
 }
 
 .p-bumper {
@@ -139,30 +151,99 @@ body {
 }
 
 .act-btn {
-	padding-left:5px;
-	padding-right:5px;
-	margin-top:3px;
-	margin-bottom:3px;
+	padding-left:3px;
+	padding-right:3px;
+	margin:3px;
+	font-family: 'Share Tech Mono', monospace;
+	width: 95%;
+	color: #00ff00;
+	font-family: 'Share Tech Mono', monospace;
+	background-color: #000000;
+	border: 1px solid #00ff00;
+}
+
+.act-btn:focus{
 	color: #00ff00;
 	font-family: 'Share Tech Mono', monospace;
 	background-color: #000000;
 }
 
-.tooltip-wrapper {
-  display: inline-block; /* display: block works as well */
-  margin: 0px; /* make some space so the tooltip is visible */
+.act-btn:hover{
+	color: #00ff00;
+	font-family: 'Share Tech Mono', monospace;
+	background-color: #0c8a87;
 }
 
-.tooltip-wrapper .btn[disabled] {
-  /* don't let button block mouse events from reaching wrapper */
-  pointer-events: none;
+.act-btn:disabled{
+	background-color: #191919;
+	border: 1px solid #ffffff;
 }
 
-.tooltip-wrapper.disabled {
-  /* OPTIONAL pointer-events setting above blocks cursor setting, so set it here */
-  cursor: not-allowed;
+.cntr-btn {
+	padding-left:5px;
+	padding-right:5px;
+	margin:3px;
+	color: #00ff00;
+	font-family: 'Share Tech Mono', monospace;
+	background-color: #000000;
+	width: 40%;
+	border: 1px solid #ffffff;
 }
 
-#gameaction7 {
+.cntr-btn:focus{
+	color: #00ff00;
+	font-family: 'Share Tech Mono', monospace;
+	background-color: #000000;
+}
+
+.cntr-btn:hover{
+	color: #00ff00;
+	font-family: 'Share Tech Mono', monospace;
+	background-color: #60007a;
+}
+
+.cntr-btn:disabled{
+	background-color: #919191;
+}
+
+#cell-5-1 {
+	background-color: #000000;
+/* 	border-radius: 5px; */
+/* 	padding: 2px; */
+	padding-right: 1px;
+}
+
+#cell-5-3 {
+	background-color: #000000;
+/* 	border-radius: 5px; */
+	padding: 5px;
+}
+
+#scramble {
+	font-size: 1.2em;
+}
+
+#payday {
+	font-size: 1.4em;
+}
+
+#crowdfund {
+	font-size: 1.2em;
+}
+
+#void {
 	height: 95%;
+	font-size: 2.0em;
+}
+
+#challenge {
+	font-size: 2em;
+}
+
+#skip {
+	font-size: 2em;
+}
+
+.active-cell {
+	border: 2px solid #ff00ff;
 }

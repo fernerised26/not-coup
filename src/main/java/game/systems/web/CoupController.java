@@ -2,12 +2,14 @@ package game.systems.web;
 
 import java.io.IOException;
 import java.security.NoSuchAlgorithmException;
+import java.util.List;
 import java.util.Map;
 
 import javax.servlet.http.HttpServletRequest;
 
 import org.json.simple.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.messaging.MessageHeaders;
 import org.springframework.messaging.handler.annotation.Headers;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.Payload;
@@ -30,8 +32,6 @@ public class CoupController {
 	@SuppressWarnings("unchecked")
 	@GetMapping(path = "/airlock", params = "candidateName")
 	public String validateNames(String candidateName, HttpServletRequest rqst) {
-		System.out.println(rqst == null);
-		System.out.println(rqst.getUserPrincipal());
 		JSONObject rspObj = new JSONObject();
 		if(table.isRoundActive()) {
 			rspObj.put("code", 4);
@@ -42,9 +42,9 @@ public class CoupController {
 		} else if(candidateName.length() > 20) {
 			rspObj.put("code", 2);
 			rspObj.put("msg", "Name too long, must be less than 20 characters");
-		} else if(candidateName.length() < 1) {
+		} else if(candidateName.isBlank() || candidateName.length() < 3) {
 			rspObj.put("code", 3);
-			rspObj.put("msg", "Name too short, must be at least 1 characters");
+			rspObj.put("msg", "Name too short, must be at least 3 characters");
 		} else {
 			String secret;
 			try {
@@ -110,15 +110,48 @@ public class CoupController {
 		tableController.notifyTableOfRoundStartAttempt(rspObj.toJSONString());
 	}
 	
-	@MessageMapping("/gameaction")
-	public void handlePlayerGameAction(
+	@MessageMapping("/payday")
+	public void handlePayday(
 				@Payload String body,
-				@Headers Map<String, String> headers,
-				java.security.Principal principal
-			) {
-		System.out.println("Handling a game action");
-		System.out.println("Body: " + body);
-		System.out.println("Headers: " + headers.toString());
-		System.out.println(principal.toString());
+				MessageHeaders headers) {
+		System.out.println("Handling a payday for:"+body);
+		System.out.println("Headers: "+headers.toString());
+		if(isMessageWellFormed(body, headers, "payday")) {
+			table.handlePayday();
+		}
+	}
+	
+	private boolean isMessageWellFormed(String playerName, MessageHeaders headers, String action) {
+		List<String> secretHeader = (List<String>) ((Map<String, Object>) headers.get("nativeHeaders")).get("secret");
+		if(secretHeader == null || secretHeader.isEmpty() || playerName.isBlank()) {
+			String errMsg = constructUnauthorizedMessage(action+"|EmptySecret", headers, playerName);
+			System.err.println(errMsg);
+			tableController.notifyTableOfUnauthorizedActivity(errMsg);
+			return false;
+		}
+		String secret = secretHeader.get(0);
+		if(!table.isActivePlayer(secret, playerName)){
+			String errMsg = constructUnauthorizedMessage(action+"|WrongPlayer", headers, playerName);
+			System.err.println(errMsg);
+			tableController.notifyTableOfUnauthorizedActivity(errMsg);
+			return false;
+		} else if(!table.isSecretCorrect(secret, playerName)){
+			String errMsg = constructUnauthorizedMessage(action+"|WrongSecret", headers, playerName);
+			System.err.println(errMsg);
+			tableController.notifyTableOfUnauthorizedActivity(errMsg);
+			return false;
+		}
+		return true;
+	}
+	
+	private String constructUnauthorizedMessage(String action, MessageHeaders headerMap, String body) {
+		StringBuilder sb = new StringBuilder();
+		sb.append("Received unauthorized message for action - ")
+			.append(action)
+			.append(", headers: ")
+			.append(headerMap.toString())
+			.append(", body: ")
+			.append(body);
+		return sb.toString();
 	}
 }

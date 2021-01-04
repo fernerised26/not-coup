@@ -10,10 +10,10 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 public class PlayerController {
 	
-//	private static final Map<String, Object> INIT_HEADER = new HashMap<>();
-//	static {
-//		INIT_HEADER.put("case", "init");
-//	}
+	private static final Map<String, Object> UPDATE_HEADER = new HashMap<>();
+	static {
+		UPDATE_HEADER.put("case", "update");
+	}
 
 	@Autowired
 	private SimpMessagingTemplate msgTemplate;
@@ -24,5 +24,9 @@ public class PlayerController {
 		initHeader.put("order", orderHeaderText);
 		
 		this.msgTemplate.convertAndSend("/queue/"+playerName, text, initHeader);
+	}
+	
+	public void contactPlayerUpdateTable(String playerName, String text) {
+		this.msgTemplate.convertAndSend("/queue/"+playerName, text, UPDATE_HEADER);
 	}
 }
