@@ -117,7 +117,8 @@ public class CoupController {
 	public void handlePayday(
 				@Payload String body,
 				MessageHeaders headers) {
-		if(isMessageWellFormed(body, headers, "payday")) {
+		AuthTuple authTuple = isMessageWellFormedForActivePlayer(headers, "payday", body);
+		if(authTuple.isWellFormed) {
 			table.handlePayday();
 		}
 	}
@@ -126,7 +127,8 @@ public class CoupController {
 	public void handleCrowdfund(
 			@Payload String body,
 			MessageHeaders headers) {
-		if(isMessageWellFormed(body, headers, "crowdfund")) {
+		AuthTuple authTuple = isMessageWellFormedForActivePlayer(headers, "crowdfund", body);
+		if(authTuple.isWellFormed) {
 			table.handleCrowdfund();
 		}
 	}
@@ -135,15 +137,18 @@ public class CoupController {
 	public void handleCrowdfundCounter(
 			@Payload String body,
 			MessageHeaders headers) {
-		if(!body.isBlank()) {
+		if(body != null && !body.isBlank()) {
 			JSONObject parsedJson = handleJsonInput(body, "crowdfundcounter", headers);
 			if(parsedJson != null) {
 				String interruptId = (String) parsedJson.get("interruptId");
-				String interrupter = (String) parsedJson.get("interrupter");
-				if(!interruptId.isBlank() && !interrupter.isBlank()) {
-					table.handleInterruptCrowdfundCounter(interruptId, interrupter);
-				} else {
-					createAndDistributeErrorMsg("crowdfundcounter|MissingInterruptData", headers, body);
+				AuthTuple authTuple = isMessageWellFormedForInterruptingPlayer(headers, "crowdfundcounter", interruptId, body);
+				if(authTuple.isWellFormed) {
+					String interrupter = authTuple.playerName;
+					if(!interruptId.isBlank() && !interrupter.isBlank()) {
+						table.handleInterruptCrowdfundCounter(interruptId, interrupter);
+					} else {
+						createAndDistributeErrorMsg("crowdfundcounter|MissingInterruptData", headers, body);
+					}
 				}
 			}
 		} else {
@@ -155,15 +160,18 @@ public class CoupController {
 	public void handleChallenge(
 			@Payload String body,
 			MessageHeaders headers) {
-		if(!body.isBlank()) {
+		if(body != null && !body.isBlank()) {
 			JSONObject parsedJson = handleJsonInput(body, "challenge", headers);
 			if(parsedJson != null) {
 				String interruptId = (String) parsedJson.get("interruptId");
-				String interrupter = (String) parsedJson.get("interrupter");
-				if(!interruptId.isBlank() && !interrupter.isBlank()) {
-					table.handleChallenge(interruptId, interrupter);
-				} else {
-					createAndDistributeErrorMsg("challenge|MissingInterruptData", headers, body);
+				AuthTuple authTuple = isMessageWellFormedForInterruptingPlayer(headers, "challenge", interruptId, body);
+				if(authTuple.isWellFormed) {
+					String interrupter = authTuple.playerName;
+					if(!interruptId.isBlank() && !interrupter.isBlank()) {
+						table.handleChallenge(interruptId, interrupter);
+					} else {
+						createAndDistributeErrorMsg("challenge|MissingInterruptData", headers, body);
+					}
 				}
 			}
 		} else {
@@ -175,15 +183,18 @@ public class CoupController {
 	public void handleChallengeResponse(
 			@Payload String body,
 			MessageHeaders headers) {
-		if(!body.isBlank()) {
+		if(body != null && !body.isBlank()) {
 			JSONObject parsedJson = handleJsonInput(body, "challengeResponse", headers);
 			if(parsedJson != null) {
 				String interruptId = (String) parsedJson.get("interruptId");
-				Integer cardIndex = Integer.valueOf((int) ((long) parsedJson.get("cardIndex")));
-				if(!interruptId.isBlank() && cardIndex != null) {
-					table.handleInterruptChallengeResponse(interruptId, cardIndex.intValue());
-				} else {
-					createAndDistributeErrorMsg("challengeResponse|MissingInterruptData", headers, body);
+				AuthTuple authTuple = isMessageWellFormedForInterruptingPlayer(headers, "challengeresponse1", interruptId, body);
+				if(authTuple.isWellFormed) {
+					Integer cardIndex = Integer.valueOf((int) ((long) parsedJson.get("cardIndex")));
+					if(!interruptId.isBlank() && cardIndex != null) {
+						table.handleInterruptChallengeResponse(interruptId, cardIndex.intValue());
+					} else {
+						createAndDistributeErrorMsg("challengeResponse|MissingInterruptData", headers, body);
+					}
 				}
 			}
 		} else {
@@ -195,15 +206,18 @@ public class CoupController {
 	public void handleSuccessfulChallengeDefense(
 			@Payload String body,
 			MessageHeaders headers) {
-		if(!body.isBlank()) {
+		if(body != null && !body.isBlank()) {
 			JSONObject parsedJson = handleJsonInput(body, "successfulChallengeDefense", headers);
 			if(parsedJson != null) {
 				String interruptId = (String) parsedJson.get("interruptId");
-				Integer cardIndex = Integer.valueOf((int) ((long) parsedJson.get("cardIndex")));
-				if(!interruptId.isBlank() && cardIndex != null) {
-					table.handleInterruptSuccessfulChallengeDefense(interruptId, cardIndex.intValue());
-				} else {
-					createAndDistributeErrorMsg("successfulChallengeDefense|MissingInterruptData", headers, body);
+				AuthTuple authTuple = isMessageWellFormedForInterruptingPlayer(headers, "challengeresponse2", interruptId, body);
+				if(authTuple.isWellFormed) {
+					Integer cardIndex = Integer.valueOf((int) ((long) parsedJson.get("cardIndex")));
+					if(!interruptId.isBlank() && cardIndex != null) {
+						table.handleInterruptSuccessfulChallengeDefense(interruptId, cardIndex.intValue());
+					} else {
+						createAndDistributeErrorMsg("successfulChallengeDefense|MissingInterruptData", headers, body);
+					}
 				}
 			}
 		} else {
@@ -215,15 +229,18 @@ public class CoupController {
 	public void handleSkip(
 			@Payload String body,
 			MessageHeaders headers) {
-		if(!body.isBlank()) {
+		if(body != null && !body.isBlank()) {
 			JSONObject parsedJson = handleJsonInput(body, "skip", headers);
 			if(parsedJson != null) {
 				String interruptId = (String) parsedJson.get("interruptId");
-				String skipper = (String) parsedJson.get("skipper");
-				if(!interruptId.isBlank() && !skipper.isBlank()) {
-					
-				} else {
-					createAndDistributeErrorMsg("skip|MissingInterruptData", headers, body);
+				AuthTuple authTuple = isMessageWellFormedForInterruptingPlayer(headers, "skip", interruptId, body);
+				if(authTuple.isWellFormed) {
+					String skipper = authTuple.playerName;
+					if(!interruptId.isBlank() && !skipper.isBlank()) {
+						table.handleChallenge(interruptId, skipper);
+					} else {
+						createAndDistributeErrorMsg("skip|MissingInterruptData", headers, body);
+					}
 				}
 			}
 		} else {
@@ -231,21 +248,49 @@ public class CoupController {
 		}
 	}
 	
-	private boolean isMessageWellFormed(String playerName, MessageHeaders headers, String action) {
+	private AuthTuple isMessageWellFormed(MessageHeaders headers, String action, String body) {
 		List<String> secretHeader = (List<String>) ((Map<String, Object>) headers.get("nativeHeaders")).get("secret");
-		if(secretHeader == null || secretHeader.isEmpty() || playerName.isBlank()) {
-			createAndDistributeErrorMsg(action+"|EmptySecret", headers, playerName);
-			return false;
+		List<String> pNameHeader = (List<String>) ((Map<String, Object>) headers.get("nativeHeaders")).get("pname");
+		if(secretHeader == null || secretHeader.isEmpty() || pNameHeader.isEmpty()) {
+			createAndDistributeErrorMsg(action+"|EmptySecret", headers, body);
+			return new AuthTuple(null, null, false);
 		}
 		String secret = secretHeader.get(0);
-		if(!table.isActivePlayer(secret, playerName)){
-			createAndDistributeErrorMsg(action+"|WrongPlayer", headers, playerName);
-			return false;
-		} else if(!table.isSecretCorrect(secret, playerName)){
-			createAndDistributeErrorMsg(action+"|WrongSecret", headers, playerName);
-			return false;
+		String playerName = pNameHeader.get(0);
+		if(!table.isSecretCorrect(secret, playerName)){
+			createAndDistributeErrorMsg(action+"|WrongSecret", headers, body);
+			return new AuthTuple(secret, playerName, false);
 		}
-		return true;
+		return new AuthTuple(secret, playerName, true);
+	}
+	
+	private AuthTuple isMessageWellFormedForActivePlayer(MessageHeaders headers, String action, String body) {
+		AuthTuple stage1AuthResult = isMessageWellFormed(headers, action, body);
+		if(stage1AuthResult.isWellFormed) {
+			boolean isActive = table.isActivePlayer(stage1AuthResult.secret, stage1AuthResult.playerName);
+			if(!isActive) {
+				createAndDistributeErrorMsg(action+"|ActivePlayerExpected", headers, body);
+			}
+			return new AuthTuple(stage1AuthResult, isActive);
+		} else {
+			return stage1AuthResult;
+		}
+	}
+	
+	private AuthTuple isMessageWellFormedForInterruptingPlayer(MessageHeaders headers, String action, String interruptId, String body) {
+		AuthTuple stage1AuthResult = isMessageWellFormed(headers, action, body);
+		if(stage1AuthResult.isWellFormed) {
+			if(interruptId == null || interruptId.isBlank()) {
+				return new AuthTuple(stage1AuthResult, false);
+			}
+			boolean isValid = table.isValidResponder(interruptId, stage1AuthResult.playerName);
+			if(!isValid) {
+				createAndDistributeErrorMsg(action+"|SelfRespondingPlayers", headers, body);
+			}
+			return new AuthTuple(stage1AuthResult, isValid);
+		} else {
+			return stage1AuthResult;
+		}
 	}
 	
 	private void createAndDistributeErrorMsg(String errorKey, MessageHeaders headerMap, String body) {
@@ -277,4 +322,21 @@ public class CoupController {
 		}
 	}
 	
+	private class AuthTuple {
+		private final String secret;
+		private final String playerName;
+		private final boolean isWellFormed;
+		
+		private AuthTuple(String secret, String playerName, boolean isWellFormed) {
+			this.secret = secret;
+			this.playerName = playerName;
+			this.isWellFormed = isWellFormed;
+		}
+		
+		private AuthTuple(AuthTuple oldTuple, boolean newIsWellFormed) {
+			this.secret = oldTuple.secret;
+			this.playerName = oldTuple.playerName;
+			this.isWellFormed = newIsWellFormed;
+		}
+	}
 }

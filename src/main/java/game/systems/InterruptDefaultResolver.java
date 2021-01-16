@@ -2,13 +2,13 @@ package game.systems;
 
 public class InterruptDefaultResolver implements Runnable{
 
-	private Interrupt interrupt;
-	private long delayMs;
-	private Tabletop table;
-	private Action defaultableAction;
+	private final String interruptId;
+	private final long delayMs;
+	private final Tabletop table;
+	private final Action defaultableAction;
 	
-	public InterruptDefaultResolver(Interrupt interrupt, long delayMs, Tabletop table, Action defaultableAction) {
-		this.interrupt = interrupt;
+	public InterruptDefaultResolver(String interruptId, long delayMs, Tabletop table, Action defaultableAction) {
+		this.interruptId = interruptId;
 		this.delayMs = delayMs;
 		this.table = table;
 		this.defaultableAction = defaultableAction;
@@ -19,14 +19,14 @@ public class InterruptDefaultResolver implements Runnable{
 		try {
 			Thread.sleep(delayMs);
 		} catch (InterruptedException e) {
-			e.printStackTrace();
+			System.out.println("Default Resolver woken for interruptId:" + interruptId);
 		}
 		switch(defaultableAction) {
 			case CROWDFUND:
-				table.resolveCrowdfund(interrupt.getInterruptId(), true);
+				table.resolveCrowdfund(interruptId, true);
 				break;
 			case CROWDFUND_COUNTER:
-				table.resolveCrowdfund(interrupt.getInterruptId(), false);
+				table.resolveCrowdfund(interruptId, false);
 				break;
 		}
 	}

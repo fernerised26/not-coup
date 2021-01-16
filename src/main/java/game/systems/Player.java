@@ -23,6 +23,7 @@ public class Player {
 	private JSONObject maskedSelf;
 	private String secret;
 	private boolean isLost = false;
+	private boolean isVoidLocked = false;
 	private Player nextPlayer;
 	private Player prevPlayer;
 	
@@ -191,5 +192,13 @@ public class Player {
 
 	public void setPrevPlayer(Player prevPlayer) {
 		this.prevPlayer = prevPlayer;
+	}
+
+	public boolean isVoidLocked() {
+		return isVoidLocked;
+	}
+
+	public void setVoidLocked(boolean isVoidLocked) {
+		this.isVoidLocked = isVoidLocked;
 	}
 }

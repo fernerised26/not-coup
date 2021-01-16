@@ -284,12 +284,12 @@ function reactLobbyEvent(message) {
 			break;
 		case "roundend": {
 			cleanupInterrupt();
-				let center = document.getElementById("cell-2-3");
-				let roundEndMsg = JSON.parse(message.body);
-				center.innerHTML = roundEndMsg.msg;
-				for(let btnIdx=0; btnIdx < actBtns.length; btnIdx++){
-					actBtns[btnIdx].disabled =  true;
-				}
+			let center = document.getElementById("cell-2-3");
+			let roundEndMsg = JSON.parse(message.body);
+			center.innerHTML = roundEndMsg.msg;
+			for(let btnIdx=0; btnIdx < actBtns.length; btnIdx++){
+				actBtns[btnIdx].disabled =  true;
+			}
 		}
 		default:
 			console.log("Unknown lobby header");
@@ -542,19 +542,19 @@ function getCardDomImgObj(cardImgData){
 //	bottomright.appendChild(counterCrowdfundButton);
 
 function payday() {
-	stompClient.send("/app/payday", {"secret":mySecret}, myName);
+	stompClient.send("/app/payday", {"secret":mySecret, "pname":myName}, myName);
 }
 
 function crowdfund() {
-	stompClient.send("/app/crowdfund", {"secret":mySecret}, myName);
+	stompClient.send("/app/crowdfund", {"secret":mySecret, "pname":myName}, myName);
 }
 
 function printMoney() {
-	stompClient.send("/app/printmoney", {"secret":mySecret}, myName);
+	stompClient.send("/app/printmoney", {"secret":mySecret, "pname":myName}, myName);
 }
 
 function scramble() {
-	stompClient.send("/app/scramble", {"secret":mySecret}, myName);
+	stompClient.send("/app/scramble", {"secret":mySecret, "pname":myName}, myName);
 }
 
 function orderHit() {
@@ -572,16 +572,16 @@ function voidOut() {
 function challenge(){
 	cleanupInterrupt();
 	stompClient.send("/app/challenge", 
-		{"secret":mySecret}, 
-		JSON.stringify({"interruptId":latestInterruptId, "interrupter":myName}));
+		{"secret":mySecret, "pname":myName}, 
+		JSON.stringify({"interruptId":latestInterruptId}));
 	latestInterruptId = null;
 }
 
 function counterCrowdfund(){
 	cleanupInterrupt();
 	stompClient.send("/app/crowdfundcounter", 
-		{"secret":mySecret}, 
-		JSON.stringify({"interruptId":latestInterruptId, "interrupter":myName}));
+		{"secret":mySecret, "pname":myName}, 
+		JSON.stringify({"interruptId":latestInterruptId}));
 	latestInterruptId = null;
 }
 
@@ -629,7 +629,7 @@ function respond1Card1(){
 	cardDivs[0].removeEventListener("click", respond1Card1);
 	cardDivs[1].removeEventListener("click", respond1Card2);
 	stompClient.send("/app/challengeresponse1", 
-		{"secret":mySecret}, 
+		{"secret":mySecret, "pname":myName}, 
 		JSON.stringify({"interruptId":latestInterruptId, "cardIndex":0}));
 }
 
@@ -638,7 +638,7 @@ function respond1Card2(){
 	cardDivs[0].removeEventListener("click", respond1Card1);
 	cardDivs[1].removeEventListener("click", respond1Card2);
 	stompClient.send("/app/challengeresponse1", 
-		{"secret":mySecret}, 
+		{"secret":mySecret, "pname":myName}, 
 		JSON.stringify({"interruptId":latestInterruptId, "cardIndex":1}));
 }
 
@@ -647,7 +647,7 @@ function respond2Card1(){
 	cardDivs[0].removeEventListener("click", respond2Card1);
 	cardDivs[1].removeEventListener("click", respond2Card2);
 	stompClient.send("/app/challengeresponse2", 
-		{"secret":mySecret}, 
+		{"secret":mySecret, "pname":myName}, 
 		JSON.stringify({"interruptId":latestInterruptId, "cardIndex":0}));
 	
 }
@@ -657,7 +657,7 @@ function respond2Card2(){
 	cardDivs[0].removeEventListener("click", respond2Card1);
 	cardDivs[1].removeEventListener("click", respond2Card2);
 	stompClient.send("/app/challengeresponse2", 
-		{"secret":mySecret}, 
+		{"secret":mySecret, "pname":myName}, 
 		JSON.stringify({"interruptId":latestInterruptId, "cardIndex":1}));
 }
 

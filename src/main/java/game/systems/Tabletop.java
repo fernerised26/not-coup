@@ -10,6 +10,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
@@ -149,6 +150,18 @@ public class Tabletop {
 		return playerMap.get(playerName).isSecret(secret);
 	}
 	
+	public boolean isValidResponder(String interruptId, String playerName) {
+		if(interruptibles.containsKey(interruptId)) {
+			Interrupt activeInterrupt = interruptibles.get(interruptId);
+			if(playerName.equals(activeInterrupt.getTriggerPlayer())){
+				return false; //can't respond to your own interrupt
+			}
+			return true;
+		} else {
+			return false;
+		}
+	}
+	
 	public void handlePayday() {
 		currActivePlayer.addCoins(1);
 		advanceActivePlayer(); //Not possible to win or lose off this action
@@ -159,18 +172,19 @@ public class Tabletop {
 	public void handleCrowdfund() {
 		String crowdfundId = UUID.randomUUID().toString();
 		
-		CrowdfundInterrupt interrupt = new CrowdfundInterrupt(crowdfundId, INTERRUPT_WAIT_MS);
-		InterruptDefaultResolver interruptKillswitch = new InterruptDefaultResolver(interrupt, INTERRUPT_WAIT_MS, this, Action.CROWDFUND);
+		CrowdfundInterrupt interrupt = new CrowdfundInterrupt(crowdfundId, INTERRUPT_WAIT_MS, currActivePlayer.getName());
+		InterruptDefaultResolver interruptKillswitch = new InterruptDefaultResolver(crowdfundId, INTERRUPT_WAIT_MS, this, Action.CROWDFUND);
 		interruptibles.put(crowdfundId, interrupt);
 		
 		JSONObject returnObj = buildInterruptOppRsp(currActivePlayer.getName(), "crowdfund", crowdfundId, currActivePlayer.getName()+" attempts to crowdfund");
 		
 		tableController.notifyTableOfGroupCounterOpp(returnObj.toJSONString());
-		interruptThreadPool.submit(interruptKillswitch);
+		Future<?> defaultResolverFuture = interruptThreadPool.submit(interruptKillswitch);
+		interrupt.setDefaultResolverFuture(defaultResolverFuture);
 	}
 	
 	//Crowdfund interrupted by Counter (Mogul)
-	public void handleInterruptCrowdfundCounter(String interruptId, String interruptingPlayer) {
+	public void handleInterruptCrowdfundCounter(String interruptId, String interruptingPlayerName) {
 		Interrupt activeCrowdfundInterrupt = null;
 		synchronized(interruptibles) {
 			if(interruptibles.containsKey(interruptId)) {
@@ -182,19 +196,20 @@ public class Tabletop {
 		if(activeCrowdfundInterrupt != null) {
 			activeCrowdfundInterrupt.setActive(false);
 			String counterId = UUID.randomUUID().toString();
-			CrowdfundCounterInterrupt interrupt = new CrowdfundCounterInterrupt(counterId, INTERRUPT_WAIT_MS, interruptingPlayer, InterruptCase.CROWDFUND_COUNTER);
-			InterruptDefaultResolver interruptKillswitch = new InterruptDefaultResolver(interrupt, INTERRUPT_WAIT_MS, this, Action.CROWDFUND_COUNTER);
+			CrowdfundCounterInterrupt interrupt = new CrowdfundCounterInterrupt(counterId, INTERRUPT_WAIT_MS, interruptingPlayerName, InterruptCase.CROWDFUND_COUNTER);
+			InterruptDefaultResolver interruptKillswitch = new InterruptDefaultResolver(counterId, INTERRUPT_WAIT_MS, this, Action.CROWDFUND_COUNTER);
 			interruptibles.put(counterId, interrupt);
 			
-			JSONObject returnObj = buildInterruptOppRsp(interruptingPlayer, "crowdfundCounter", counterId, interruptingPlayer+" blocks the crowdfund");
+			JSONObject returnObj = buildInterruptOppRsp(interruptingPlayerName, "crowdfundCounter", counterId, interruptingPlayerName+" blocks the crowdfund");
 			
 			tableController.notifyTableOfChallengeOpp(returnObj.toJSONString());
-			interruptThreadPool.submit(interruptKillswitch);
+			Future<?> defaultResolverFuture = interruptThreadPool.submit(interruptKillswitch);
+			interrupt.setDefaultResolverFuture(defaultResolverFuture);
 		}
 	}
 	
 	//Route challenges to appropriate sub-method
-	public void handleChallenge(String interruptId, String interruptingPlayer) {
+	public void handleChallenge(String interruptId, String interruptingPlayerName) {
 		Interrupt challengeableInterrupt = null;
 		synchronized(interruptibles) {
 			if(interruptibles.containsKey(interruptId)) {
@@ -206,19 +221,19 @@ public class Tabletop {
 		switch(interruptCase) {
 			case CROWDFUND_COUNTER:
 				CrowdfundCounterInterrupt castedInterrupt = (CrowdfundCounterInterrupt) challengeableInterrupt;
-				handleInterruptCrowdfundCounterChallenge(interruptingPlayer, castedInterrupt);
+				handleInterruptCrowdfundCounterChallenge(interruptingPlayerName, castedInterrupt);
 				break;
 		}
 	}
 	
 	//Counter to crowdfund interrupted by challenge
-	public void handleInterruptCrowdfundCounterChallenge(String interruptingPlayer, CrowdfundCounterInterrupt activeCrowdfundCounterInterrupt) {	
+	public void handleInterruptCrowdfundCounterChallenge(String interruptingPlayerName, CrowdfundCounterInterrupt activeCrowdfundCounterInterrupt) {	
 		if(activeCrowdfundCounterInterrupt != null) {
 			activeCrowdfundCounterInterrupt.setActive(false);
 			
 			String challengeId = UUID.randomUUID().toString();
 			String challenged = activeCrowdfundCounterInterrupt.getCounterer();
-			ChallengeInterrupt interrupt = new ChallengeInterrupt(challengeId, challenged, interruptingPlayer, Action.CROWDFUND_COUNTER);
+			ChallengeInterrupt interrupt = new ChallengeInterrupt(challengeId, challenged, interruptingPlayerName, Action.CROWDFUND_COUNTER);
 			interruptibles.put(challengeId, interrupt);
 			
 			Player challengedPlayer = playerMap.get(challenged);
@@ -231,7 +246,7 @@ public class Tabletop {
 				return;
 			}
 			
-			JSONObject returnObj = buildChallengePhase1Rsp(challenged, interruptingPlayer, challengeId, interruptingPlayer+" challenges Mogul of "+challenged, validIndices);
+			JSONObject returnObj = buildChallengePhase1Rsp(challenged, interruptingPlayerName, challengeId, interruptingPlayerName+" challenges Mogul of "+challenged, validIndices);
 			
 			tableController.notifyTableOfChallenge(returnObj.toJSONString());
 		}
@@ -254,13 +269,14 @@ public class Tabletop {
 					Player challengedPlayer = playerMap.get(challengeInterrupt.getChallenged());
 					if(cardIndexRsp == 0 || cardIndexRsp == 1) {
 						Card revealedCard = challengedPlayer.revealCardInHand(cardIndexRsp);
+						String challenger = challengeInterrupt.getChallenger();
 						if(Roles.MOGUL.equals(revealedCard.getRole())) {
 							String challengeLossId = UUID.randomUUID().toString();
-							String challenger = challengeInterrupt.getChallenger();
 							ChallengeInterrupt interrupt = new ChallengeInterrupt(challengeLossId, challenged, challenger, Action.CROWDFUND_COUNTER_CHALLENGE_LOSS, cardIndexRsp);
 							interruptibles.put(challengeLossId, interrupt);
 							
 							sendUpdatedBoardToPlayers(); //show revealed card
+							tableController.notifyTableWithSimpleMessage(challenged+" successfully defended the challenge from "+challenger);
 							
 							Player challengerPlayer = playerMap.get(challenger);
 							int validIndices = -1;
@@ -280,6 +296,8 @@ public class Tabletop {
 								return;
 							}
 							challengedPlayer.eliminateCardInHand(cardIndexRsp);
+							sendUpdatedBoardToPlayers();
+							tableController.notifyTableWithSimpleMessage(challenged+" loses the challenge from "+challenger);
 							
 							Player winnerCandidate = checkForWinner(challengedPlayer);
 							if(!DUMMY_PLAYER.equals(winnerCandidate)) {
@@ -334,7 +352,7 @@ public class Tabletop {
 						deck.add(defendedCard);
 						deck.shuffle();
 						challengedPlayer.replaceCardInHand(deck.drawOne(), defenderIndexCardToReplace);
-						
+						tableController.notifyTableWithSimpleMessage(challenged+" successfully defended the challenge from "+challenger);
 						advanceActivePlayer();
 						sendUpdatedBoardToPlayers();
 					} else {
@@ -363,6 +381,21 @@ public class Tabletop {
 			}
 			advanceActivePlayer();
 			sendUpdatedBoardToPlayers();
+		}
+	}
+	
+	public void handleSkipInput(String interruptId, String skippingPlayerName) {
+		synchronized(interruptibles) {
+			if(interruptibles.containsKey(interruptId)) {
+				Interrupt activeInterrupt = interruptibles.get(interruptId);
+				activeInterrupt.addResponder(skippingPlayerName);
+				int responderCount = activeInterrupt.getNumberOfResponders();
+				
+				if(responderCount >= (playerMap.size() - 1)) {
+					interruptibles.remove(interruptId);
+					activeInterrupt.getDefaultResolverFuture().cancel(true);
+				}
+			}
 		}
 	}
 	
