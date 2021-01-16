@@ -3,19 +3,19 @@ package game.systems;
 public class ChallengeInterrupt extends Interrupt {
 	
 	private final String challenged;
-	private final Action actionChallenged;
+	private final String challenger;
 	private int revealedDefendingCardIndex = -1;
 
-	public ChallengeInterrupt(String interruptId, String challenged, String challenger, Action actionChallenged) {
-		super(interruptId, challenger);
+	public ChallengeInterrupt(String interruptId, String challenged, String challenger, String triggerPlayer, InterruptCase actionChallenged) {
+		super(interruptId, triggerPlayer, actionChallenged);
 		this.challenged = challenged;
-		this.actionChallenged = actionChallenged;
+		this.challenger = challenger;
 	}
 	
-	public ChallengeInterrupt(String interruptId, String challenged, String challenger, Action actionChallenged, int revealedDefendingCardIndex) {
-		super(interruptId, challenger);
+	public ChallengeInterrupt(String interruptId, String challenged, String challenger, String triggerPlayer, InterruptCase actionChallenged, int revealedDefendingCardIndex) {
+		super(interruptId, triggerPlayer, actionChallenged);
 		this.challenged = challenged;
-		this.actionChallenged = actionChallenged;
+		this.challenger = challenger;
 		this.revealedDefendingCardIndex = revealedDefendingCardIndex;
 	}
 
@@ -24,11 +24,11 @@ public class ChallengeInterrupt extends Interrupt {
 	}
 	
 	public String getChallenger() {
-		return getTriggerPlayer();
+		return challenger;
 	}
 	
-	public Action getActionChallenged() {
-		return actionChallenged;
+	public InterruptCase getActionChallenged() {
+		return getInterruptCase();
 	}
 	
 	public int getRevealedDefendingCardIndex() {

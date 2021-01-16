@@ -173,7 +173,7 @@ public class Tabletop {
 		String crowdfundId = UUID.randomUUID().toString();
 		
 		CrowdfundInterrupt interrupt = new CrowdfundInterrupt(crowdfundId, INTERRUPT_WAIT_MS, currActivePlayer.getName());
-		InterruptDefaultResolver interruptKillswitch = new InterruptDefaultResolver(crowdfundId, INTERRUPT_WAIT_MS, this, Action.CROWDFUND);
+		InterruptDefaultResolver interruptKillswitch = new InterruptDefaultResolver(crowdfundId, INTERRUPT_WAIT_MS, this, InterruptCase.CROWDFUND);
 		interruptibles.put(crowdfundId, interrupt);
 		
 		JSONObject returnObj = buildInterruptOppRsp(currActivePlayer.getName(), "crowdfund", crowdfundId, currActivePlayer.getName()+" attempts to crowdfund");
@@ -197,7 +197,7 @@ public class Tabletop {
 			activeCrowdfundInterrupt.setActive(false);
 			String counterId = UUID.randomUUID().toString();
 			CrowdfundCounterInterrupt interrupt = new CrowdfundCounterInterrupt(counterId, INTERRUPT_WAIT_MS, interruptingPlayerName, InterruptCase.CROWDFUND_COUNTER);
-			InterruptDefaultResolver interruptKillswitch = new InterruptDefaultResolver(counterId, INTERRUPT_WAIT_MS, this, Action.CROWDFUND_COUNTER);
+			InterruptDefaultResolver interruptKillswitch = new InterruptDefaultResolver(counterId, INTERRUPT_WAIT_MS, this, InterruptCase.CROWDFUND_COUNTER);
 			interruptibles.put(counterId, interrupt);
 			
 			JSONObject returnObj = buildInterruptOppRsp(interruptingPlayerName, "crowdfundCounter", counterId, interruptingPlayerName+" blocks the crowdfund");
@@ -223,6 +223,9 @@ public class Tabletop {
 				CrowdfundCounterInterrupt castedInterrupt = (CrowdfundCounterInterrupt) challengeableInterrupt;
 				handleInterruptCrowdfundCounterChallenge(interruptingPlayerName, castedInterrupt);
 				break;
+		default:
+			System.err.println("Not a challengeable action: "+interruptCase+"|InterruptId: "+interruptId+"|InterruptingPlayer: "+interruptingPlayerName);
+			break;
 		}
 	}
 	
@@ -233,7 +236,7 @@ public class Tabletop {
 			
 			String challengeId = UUID.randomUUID().toString();
 			String challenged = activeCrowdfundCounterInterrupt.getCounterer();
-			ChallengeInterrupt interrupt = new ChallengeInterrupt(challengeId, challenged, interruptingPlayerName, Action.CROWDFUND_COUNTER);
+			ChallengeInterrupt interrupt = new ChallengeInterrupt(challengeId, challenged, interruptingPlayerName, interruptingPlayerName, InterruptCase.CROWDFUND_COUNTER);
 			interruptibles.put(challengeId, interrupt);
 			
 			Player challengedPlayer = playerMap.get(challenged);
@@ -272,7 +275,7 @@ public class Tabletop {
 						String challenger = challengeInterrupt.getChallenger();
 						if(Roles.MOGUL.equals(revealedCard.getRole())) {
 							String challengeLossId = UUID.randomUUID().toString();
-							ChallengeInterrupt interrupt = new ChallengeInterrupt(challengeLossId, challenged, challenger, Action.CROWDFUND_COUNTER_CHALLENGE_LOSS, cardIndexRsp);
+							ChallengeInterrupt interrupt = new ChallengeInterrupt(challengeLossId, challenged, challenger, challenged, InterruptCase.CROWDFUND_COUNTER_CHALLENGE_LOSS, cardIndexRsp);
 							interruptibles.put(challengeLossId, interrupt);
 							
 							sendUpdatedBoardToPlayers(); //show revealed card
@@ -313,7 +316,7 @@ public class Tabletop {
 					}
 					break;
 			default:
-				tableController.notifyTableOfUnauthorizedActivity("Invalid challenge received for "+challengeInterrupt.getActionChallenged()+" by "+challenged);
+				tableController.notifyTableOfUnauthorizedActivity("Challenge defense received for invalid challenge loss: "+challengeInterrupt.getActionChallenged()+" by "+challenged);
 				break;
 			}
 		}
@@ -332,7 +335,7 @@ public class Tabletop {
 			challengeInterrupt.setActive(false);
 			String challenged = challengeInterrupt.getChallenged();
 			switch(challengeInterrupt.getActionChallenged()) {
-				case CROWDFUND_COUNTER:
+				case CROWDFUND_COUNTER_CHALLENGE_LOSS:
 					String challenger = challengeInterrupt.getChallenger();
 					Player challengerPlayer = playerMap.get(challenger);
 					Player challengedPlayer = playerMap.get(challenged); 

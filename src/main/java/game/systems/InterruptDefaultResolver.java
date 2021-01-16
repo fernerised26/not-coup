@@ -5,9 +5,9 @@ public class InterruptDefaultResolver implements Runnable{
 	private final String interruptId;
 	private final long delayMs;
 	private final Tabletop table;
-	private final Action defaultableAction;
+	private final InterruptCase defaultableAction;
 	
-	public InterruptDefaultResolver(String interruptId, long delayMs, Tabletop table, Action defaultableAction) {
+	public InterruptDefaultResolver(String interruptId, long delayMs, Tabletop table, InterruptCase defaultableAction) {
 		this.interruptId = interruptId;
 		this.delayMs = delayMs;
 		this.table = table;
@@ -28,6 +28,8 @@ public class InterruptDefaultResolver implements Runnable{
 			case CROWDFUND_COUNTER:
 				table.resolveCrowdfund(interruptId, false);
 				break;
+			default:
+				System.err.println("Invalid case, no valid default behavior: "+defaultableAction);
 		}
 	}
 }

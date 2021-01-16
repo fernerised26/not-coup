@@ -166,9 +166,8 @@ function reactLobbyEvent(message) {
 			}
 			break;
 		case "simpmsg":{
-				let simpMsg = JSON.parse(message.body);
 				let center = document.getElementById("cell-2-3");
-				center.innerHTML = simpMsg.msg;
+				center.innerHTML = message.body;
 			}
 			break;
 		case "groupcounteropp": {
@@ -256,7 +255,7 @@ function reactLobbyEvent(message) {
 					let myPlayerSpot = document.getElementById("self-player");
 					let card1Div = myPlayerSpot.getElementsByClassName("card-1")[0];
 					let card2Div = myPlayerSpot.getElementsByClassName("card-2")[0];
-					enableValidClickableCards(card1Div, card2Div, validIndices);
+					enableValidClickableCardsChallenge1(card1Div, card2Div, validIndices);
 				} else {
 					center.innerHTML = challengeMsg.msg;
 				}
@@ -276,7 +275,7 @@ function reactLobbyEvent(message) {
 					let myPlayerSpot = document.getElementById("self-player");
 					let card1Div = myPlayerSpot.getElementsByClassName("card-1")[0];
 					let card2Div = myPlayerSpot.getElementsByClassName("card-2")[0];
-					enableValidClickableCards(card1Div, card2Div, validIndices);
+					enableValidClickableCardsChallenge2(card1Div, card2Div, validIndices);
 				} else {
 					center.innerHTML = challengeMsg.msg;
 				}
@@ -603,7 +602,7 @@ function counterHit(){
 	latestInterruptId = null;
 }
 
-function enableValidClickableCards(card1Div, card2Div, validIndices){
+function enableValidClickableCardsChallenge1(card1Div, card2Div, validIndices){
 	switch(validIndices) {
 		case 2: 
 			card1Div.classList.add("hoverable-card");
@@ -618,6 +617,27 @@ function enableValidClickableCards(card1Div, card2Div, validIndices){
 		case 0:
 			card1Div.classList.add("hoverable-card");
 			card1Div.addEventListener("click", respond1Card1);
+			break;
+		default:
+			console.log("Unknown validity code for challenge response:"+validIndices);
+	}
+}
+
+function enableValidClickableCardsChallenge2(card1Div, card2Div, validIndices){
+	switch(validIndices) {
+		case 2: 
+			card1Div.classList.add("hoverable-card");
+			card2Div.classList.add("hoverable-card");
+			card1Div.addEventListener("click", respond2Card1);
+			card2Div.addEventListener("click", respond2Card2);
+			break;
+		case 1:
+			card2Div.classList.add("hoverable-card");
+			card2Div.addEventListener("click", respond2Card2);
+			break;
+		case 0:
+			card1Div.classList.add("hoverable-card");
+			card1Div.addEventListener("click", respond2Card1);
 			break;
 		default:
 			console.log("Unknown validity code for challenge response:"+validIndices);
