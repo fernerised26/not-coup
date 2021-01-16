@@ -49,6 +49,7 @@ public class Player {
 		tempSelfJson.put("coins", coins);
 		tempSelfJson.put("cardsOwned", jsonHand);
 		tempSelfJson.put("isLost", false);
+		tempSelfJson.put("isVoidLocked", false);
 		jsonSelf = tempSelfJson;
 	}
 	
@@ -200,5 +201,6 @@ public class Player {
 
 	public void setVoidLocked(boolean isVoidLocked) {
 		this.isVoidLocked = isVoidLocked;
+		jsonSelf.put("isVoidLocked", isVoidLocked);
 	}
 }

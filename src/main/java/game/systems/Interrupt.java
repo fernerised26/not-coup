@@ -46,6 +46,7 @@ public abstract class Interrupt {
 		this.responderNames = new HashSet<>();
 		this.duration = -1L;
 		this.triggerPlayer = triggerPlayer;
+		this.interruptCase = interruptCase;
 	}
 
 	public String getInterruptId() {

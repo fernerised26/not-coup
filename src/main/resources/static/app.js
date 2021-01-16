@@ -602,6 +602,14 @@ function counterHit(){
 	latestInterruptId = null;
 }
 
+function skip(){
+	cleanupInterrupt();
+	stompClient.send("/app/skip", 
+		{"secret":mySecret, "pname":myName}, 
+		JSON.stringify({"interruptId":latestInterruptId}));
+	latestInterruptId = null;
+}
+
 function enableValidClickableCardsChallenge1(card1Div, card2Div, validIndices){
 	switch(validIndices) {
 		case 2: 
@@ -742,6 +750,7 @@ $(function () {
 	$("#void").click(function() { voidOut(); });
 	counterCrowdfundButton.addEventListener("click", counterCrowdfund);
 	challengeButton.addEventListener("click", challenge);
+	skipButton.addEventListener("click", skip);
 	$("#testbutton").click(function() { testButton(); });
 	$("#testbutton2").click(function() { testButton2(); });
 });

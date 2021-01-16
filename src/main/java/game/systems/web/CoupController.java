@@ -237,7 +237,7 @@ public class CoupController {
 				if(authTuple.isWellFormed) {
 					String skipper = authTuple.playerName;
 					if(!interruptId.isBlank() && !skipper.isBlank()) {
-						table.handleChallenge(interruptId, skipper);
+						table.handleSkip(interruptId, skipper);
 					} else {
 						createAndDistributeErrorMsg("skip|MissingInterruptData", headers, body);
 					}

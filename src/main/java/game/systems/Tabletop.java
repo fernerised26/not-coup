@@ -387,17 +387,14 @@ public class Tabletop {
 		}
 	}
 	
-	public void handleSkipInput(String interruptId, String skippingPlayerName) {
-		synchronized(interruptibles) {
-			if(interruptibles.containsKey(interruptId)) {
-				Interrupt activeInterrupt = interruptibles.get(interruptId);
-				activeInterrupt.addResponder(skippingPlayerName);
-				int responderCount = activeInterrupt.getNumberOfResponders();
-				
-				if(responderCount >= (playerMap.size() - 1)) {
-					interruptibles.remove(interruptId);
-					activeInterrupt.getDefaultResolverFuture().cancel(true);
-				}
+	public void handleSkip(String interruptId, String skippingPlayerName) {
+		if(interruptibles.containsKey(interruptId)) {
+			Interrupt activeInterrupt = interruptibles.get(interruptId);
+			activeInterrupt.addResponder(skippingPlayerName);
+			int responderCount = activeInterrupt.getNumberOfResponders();
+			
+			if(responderCount >= (playerMap.size() - 1)) {
+				activeInterrupt.getDefaultResolverFuture().cancel(true);
 			}
 		}
 	}
@@ -424,6 +421,9 @@ public class Tabletop {
 			candidateActivePlayer = candidateActivePlayer.getNextPlayer();
 		}
 		currActivePlayer = candidateActivePlayer;
+		if(currActivePlayer.getCoins() >= 10) {
+			currActivePlayer.setVoidLocked(true);
+		}
 		return false;
 	}
 	
