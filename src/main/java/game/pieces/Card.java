@@ -4,6 +4,7 @@ public abstract class Card {
 
 	public static String FACEDOWN = "FACEDOWN";
 	private boolean isFaceUp = false;
+	private boolean isEliminated = false;
 	
 	public void flipUp() {
 		isFaceUp = true;
@@ -16,4 +17,14 @@ public abstract class Card {
 	public boolean isFaceUp() {
 		return isFaceUp;
 	}
+	
+	public void eliminate() {
+		isEliminated = true;
+	}
+	
+	public boolean isEliminated() {
+		return isEliminated;
+	}
+	
+	public abstract Roles getRole();
 }

@@ -22,6 +22,9 @@ public class Player {
 	private JSONArray maskedHand;
 	private JSONObject maskedSelf;
 	private String secret;
+	private boolean isLost = false;
+	private Player nextPlayer;
+	private Player prevPlayer;
 	
 	@SuppressWarnings("unchecked")
 	public Player(String name, String secret) {
@@ -36,6 +39,7 @@ public class Player {
 		JSONObject tempMaskedSelf = new JSONObject();
 		tempMaskedSelf.put("coins", coins);
 		tempMaskedSelf.put("cardsOwned", maskedHand);
+		tempMaskedSelf.put("isLost", false);
 		maskedSelf = tempMaskedSelf;
 		
 		jsonHand = new JSONArray();
@@ -43,6 +47,7 @@ public class Player {
 		JSONObject tempSelfJson = new JSONObject();
 		tempSelfJson.put("coins", coins);
 		tempSelfJson.put("cardsOwned", jsonHand);
+		tempSelfJson.put("isLost", false);
 		jsonSelf = tempSelfJson;
 	}
 	
@@ -59,15 +64,31 @@ public class Player {
 		return coins;
 	}
 	
-	public void eliminateCardInHand(int indexInHand) {
+	public Card eliminateCardInHand(int indexInHand) {
 		Card cardToFlip = cardsOwned.get(indexInHand);
 		cardToFlip.flipUp();
-		updateMaskedHandForElimination(indexInHand, cardToFlip.toString());
+		cardToFlip.eliminate();
+		updateHandsForReveal(indexInHand, cardToFlip.toString());
+		return cardToFlip;
 	}
 	
-	public String revealCardInHand(int indexInHand) {
+	public Card getCardInHand(int indexInHand) {
+		Card card = cardsOwned.get(indexInHand);
+		return card;
+	}
+	
+	@SuppressWarnings("unchecked")
+	public Card revealCardInHand(int indexInHand) {
 		Card cardToFlip = cardsOwned.get(indexInHand);
-		return cardToFlip.toString();
+		cardToFlip.flipUp();
+		updateHandsForReveal(indexInHand, cardToFlip.toString());
+		return cardToFlip;
+	}
+	
+	public void replaceCardInHand(Card replacementCard, int indexToReplace) {
+		cardsOwned.set(indexToReplace, replacementCard);
+		jsonHand.set(indexToReplace, replacementCard.toString());
+		maskedHand.set(indexToReplace, Card.FACEDOWN);
 	}
 	
 	public void addCardsViaExchange(List<Card> replacementHand) {
@@ -86,7 +107,8 @@ public class Player {
 	}
 	
 	@SuppressWarnings("unchecked")
-	private void updateMaskedHandForElimination(int indexInHand, String flippedCardName) {
+	private void updateHandsForReveal(int indexInHand, String flippedCardName) {
+		jsonHand.set(indexInHand, flippedCardName);
 		maskedHand.set(indexInHand, flippedCardName);
 	}
 	
@@ -105,7 +127,20 @@ public class Player {
 	
 	@Override
 	public String toString() {
-		return "Player [name=" + name + ", coins=" + coins + ", cardsOwned=" + cardsOwned + ", roles=" + roles + ", jsonHand=" + jsonHand.toJSONString() + ", maskedHand=" + maskedHand.toJSONString() + "]";
+		StringBuilder builder = new StringBuilder();
+		builder.append("Player [name=").append(name)
+			.append(", coins=").append(coins)
+			.append(", cardsOwned=").append(cardsOwned)
+			.append(", roles=").append(roles)
+			.append(", jsonHand=").append(jsonHand.toJSONString())
+			.append(", jsonSelf=").append(jsonSelf.toJSONString())
+			.append(", maskedHand=").append(maskedHand.toJSONString())
+			.append(", maskedSelf=").append(maskedSelf.toJSONString())
+			.append(", secret=").append(secret)
+			.append(", isLost=").append(isLost)
+			.append(", nextPlayer=").append(nextPlayer.getName())
+			.append(", prevPlayer=").append(prevPlayer.getName()).append("]");
+		return builder.toString();
 	}
 
 	public String getName() {
@@ -130,5 +165,31 @@ public class Player {
 	
 	public JSONObject getMaskedSelf() {
 		return maskedSelf;
+	}
+	
+	public boolean isLost() {
+		return isLost;
+	}
+	
+	public void eliminatePlayer() {
+		isLost = true;
+		maskedSelf.put("isLost", true);
+		jsonSelf.put("isLost", true);
+	}
+
+	public Player getNextPlayer() {
+		return nextPlayer;
+	}
+
+	public void setNextPlayer(Player nextPlayer) {
+		this.nextPlayer = nextPlayer;
+	}
+
+	public Player getPrevPlayer() {
+		return prevPlayer;
+	}
+
+	public void setPrevPlayer(Player prevPlayer) {
+		this.prevPlayer = prevPlayer;
 	}
 }

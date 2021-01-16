@@ -46,12 +46,16 @@ public class DeckImpl implements Deck {
 		
 		for(int i=0; i<numOfCards; i++) {
 			Card removedCard = deck.remove(deck.size()-1);
-//			System.out.println("drawing from index:" + (deck.size()-1));
-//			System.out.println("drew card: "+removedCard);
 			returnList.add(removedCard);
 		}
 		
 		return returnList;
+	}
+	
+	@Override
+	public Card drawOne() {
+		Card removedCard = deck.remove(deck.size()-1);
+		return removedCard;
 	}
 
 	
@@ -61,5 +65,11 @@ public class DeckImpl implements Deck {
 			card.flipDown();
 			deck.add(card);
 		}
+	}
+	
+	@Override
+	public void add(Card cardToAdd) {
+		cardToAdd.flipDown();
+		deck.add(cardToAdd);
 	}
 }

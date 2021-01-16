@@ -244,6 +244,24 @@ body {
 	font-size: 2em;
 }
 
+#cell-2-3 {
+	color: #000000;
+	font-family: 'Share Tech Mono', monospace;
+	font-size: 2em;
+}
+
+#singleton-progress-bar {
+	position: absolute;
+	bottom: 10px;
+	right: 0px;
+	left: 0px;
+	height: 20px;
+}
+
 .active-cell {
 	border: 2px solid #ff00ff;
+}
+
+.hoverable-card:hover{
+	background-color: #ffa500;
 }

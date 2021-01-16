@@ -8,8 +8,18 @@ public class DecoyCard extends Card {
 	public static Roles ROLE = Roles.DECOY;
 
 	private String name = "Decoy";
-	
+	private String eliminatedName = "DecoyElim";
+
 	public String toString() {
-		return name;
+		if(isEliminated()) {
+			return eliminatedName;
+		} else {
+			return name;
+		}
+	}
+	
+	@Override
+	public Roles getRole() {
+		return ROLE;
 	}
 }

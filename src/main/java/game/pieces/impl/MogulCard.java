@@ -8,8 +8,18 @@ public class MogulCard extends Card {
 	public static Roles ROLE = Roles.MOGUL;
 	
 	private String name = "Mogul";
+	private String eliminatedName = "MogulElim";
 
 	public String toString() {
-		return name;
+		if(isEliminated()) {
+			return eliminatedName;
+		} else {
+			return name;
+		}
+	}
+
+	@Override
+	public Roles getRole() {
+		return ROLE;
 	}
 }

@@ -1,5 +1,6 @@
 package game.systems.web;
 
+import java.awt.Desktop.Action;
 import java.io.IOException;
 import java.security.NoSuchAlgorithmException;
 import java.util.List;
@@ -8,6 +9,8 @@ import java.util.Map;
 import javax.servlet.http.HttpServletRequest;
 
 import org.json.simple.JSONObject;
+import org.json.simple.parser.JSONParser;
+import org.json.simple.parser.ParseException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.messaging.MessageHeaders;
 import org.springframework.messaging.handler.annotation.Headers;
@@ -104,44 +107,151 @@ public class CoupController {
 			} catch (IOException e) {
 				rspObj.put("code", 5);
 				rspObj.put("msg", "Invalid player role");
-				tableController.notifyTableOfRoundStartAttempt(rspObj.toJSONString());
+				tableController.notifyTableOfError(rspObj.toJSONString());
 			}
 		}
-		tableController.notifyTableOfRoundStartAttempt(rspObj.toJSONString());
+		tableController.notifyTableOfError(rspObj.toJSONString());
 	}
 	
 	@MessageMapping("/payday")
 	public void handlePayday(
 				@Payload String body,
 				MessageHeaders headers) {
-		System.out.println("Handling a payday for:"+body);
-		System.out.println("Headers: "+headers.toString());
 		if(isMessageWellFormed(body, headers, "payday")) {
 			table.handlePayday();
+		}
+	}
+	
+	@MessageMapping("/crowdfund")
+	public void handleCrowdfund(
+			@Payload String body,
+			MessageHeaders headers) {
+		if(isMessageWellFormed(body, headers, "crowdfund")) {
+			table.handleCrowdfund();
+		}
+	}
+	
+	@MessageMapping("/crowdfundcounter")
+	public void handleCrowdfundCounter(
+			@Payload String body,
+			MessageHeaders headers) {
+		if(!body.isBlank()) {
+			JSONObject parsedJson = handleJsonInput(body, "crowdfundcounter", headers);
+			if(parsedJson != null) {
+				String interruptId = (String) parsedJson.get("interruptId");
+				String interrupter = (String) parsedJson.get("interrupter");
+				if(!interruptId.isBlank() && !interrupter.isBlank()) {
+					table.handleInterruptCrowdfundCounter(interruptId, interrupter);
+				} else {
+					createAndDistributeErrorMsg("crowdfundcounter|MissingInterruptData", headers, body);
+				}
+			}
+		} else {
+			createAndDistributeErrorMsg("crowdfundcounter|EmptyBody", headers, body);
+		}
+	}
+	
+	@MessageMapping("/challenge")
+	public void handleChallenge(
+			@Payload String body,
+			MessageHeaders headers) {
+		if(!body.isBlank()) {
+			JSONObject parsedJson = handleJsonInput(body, "challenge", headers);
+			if(parsedJson != null) {
+				String interruptId = (String) parsedJson.get("interruptId");
+				String interrupter = (String) parsedJson.get("interrupter");
+				if(!interruptId.isBlank() && !interrupter.isBlank()) {
+					table.handleChallenge(interruptId, interrupter);
+				} else {
+					createAndDistributeErrorMsg("challenge|MissingInterruptData", headers, body);
+				}
+			}
+		} else {
+			createAndDistributeErrorMsg("challenge|EmptyBody", headers, body);
+		}
+	}
+	
+	@MessageMapping("/challengeresponse1")
+	public void handleChallengeResponse(
+			@Payload String body,
+			MessageHeaders headers) {
+		if(!body.isBlank()) {
+			JSONObject parsedJson = handleJsonInput(body, "challengeResponse", headers);
+			if(parsedJson != null) {
+				String interruptId = (String) parsedJson.get("interruptId");
+				Integer cardIndex = Integer.valueOf((int) ((long) parsedJson.get("cardIndex")));
+				if(!interruptId.isBlank() && cardIndex != null) {
+					table.handleInterruptChallengeResponse(interruptId, cardIndex.intValue());
+				} else {
+					createAndDistributeErrorMsg("challengeResponse|MissingInterruptData", headers, body);
+				}
+			}
+		} else {
+			createAndDistributeErrorMsg("challengeResponse|EmptyBody", headers, body);
+		}
+	}
+	
+	@MessageMapping("/challengeresponse2")
+	public void handleSuccessfulChallengeDefense(
+			@Payload String body,
+			MessageHeaders headers) {
+		if(!body.isBlank()) {
+			JSONObject parsedJson = handleJsonInput(body, "successfulChallengeDefense", headers);
+			if(parsedJson != null) {
+				String interruptId = (String) parsedJson.get("interruptId");
+				Integer cardIndex = Integer.valueOf((int) ((long) parsedJson.get("cardIndex")));
+				if(!interruptId.isBlank() && cardIndex != null) {
+					table.handleInterruptSuccessfulChallengeDefense(interruptId, cardIndex.intValue());
+				} else {
+					createAndDistributeErrorMsg("successfulChallengeDefense|MissingInterruptData", headers, body);
+				}
+			}
+		} else {
+			createAndDistributeErrorMsg("successfulChallengeDefense|EmptyBody", headers, body);
+		}
+	}
+	
+	@MessageMapping("/skip")
+	public void handleSkip(
+			@Payload String body,
+			MessageHeaders headers) {
+		if(!body.isBlank()) {
+			JSONObject parsedJson = handleJsonInput(body, "skip", headers);
+			if(parsedJson != null) {
+				String interruptId = (String) parsedJson.get("interruptId");
+				String skipper = (String) parsedJson.get("skipper");
+				if(!interruptId.isBlank() && !skipper.isBlank()) {
+					
+				} else {
+					createAndDistributeErrorMsg("skip|MissingInterruptData", headers, body);
+				}
+			}
+		} else {
+			createAndDistributeErrorMsg("skip|EmptyBody", headers, body);
 		}
 	}
 	
 	private boolean isMessageWellFormed(String playerName, MessageHeaders headers, String action) {
 		List<String> secretHeader = (List<String>) ((Map<String, Object>) headers.get("nativeHeaders")).get("secret");
 		if(secretHeader == null || secretHeader.isEmpty() || playerName.isBlank()) {
-			String errMsg = constructUnauthorizedMessage(action+"|EmptySecret", headers, playerName);
-			System.err.println(errMsg);
-			tableController.notifyTableOfUnauthorizedActivity(errMsg);
+			createAndDistributeErrorMsg(action+"|EmptySecret", headers, playerName);
 			return false;
 		}
 		String secret = secretHeader.get(0);
 		if(!table.isActivePlayer(secret, playerName)){
-			String errMsg = constructUnauthorizedMessage(action+"|WrongPlayer", headers, playerName);
-			System.err.println(errMsg);
-			tableController.notifyTableOfUnauthorizedActivity(errMsg);
+			createAndDistributeErrorMsg(action+"|WrongPlayer", headers, playerName);
 			return false;
 		} else if(!table.isSecretCorrect(secret, playerName)){
-			String errMsg = constructUnauthorizedMessage(action+"|WrongSecret", headers, playerName);
-			System.err.println(errMsg);
-			tableController.notifyTableOfUnauthorizedActivity(errMsg);
+			createAndDistributeErrorMsg(action+"|WrongSecret", headers, playerName);
 			return false;
 		}
 		return true;
+	}
+	
+	private void createAndDistributeErrorMsg(String errorKey, MessageHeaders headerMap, String body) {
+		String errMsg = constructUnauthorizedMessage(errorKey, headerMap, body);
+		System.err.println(errMsg);
+		tableController.notifyTableOfUnauthorizedActivity(errMsg);
 	}
 	
 	private String constructUnauthorizedMessage(String action, MessageHeaders headerMap, String body) {
@@ -154,4 +264,17 @@ public class CoupController {
 			.append(body);
 		return sb.toString();
 	}
+	
+	private JSONObject handleJsonInput(String input, String action, MessageHeaders headerMap) {
+		try {
+			JSONParser parser = new JSONParser();
+			JSONObject parsedJson = (JSONObject) parser.parse(input);
+			return parsedJson;
+		} catch (ParseException e) {
+			e.printStackTrace();
+			createAndDistributeErrorMsg(action+"|UnparseableBody", headerMap, input);
+			return null;
+		}
+	}
+	
 }

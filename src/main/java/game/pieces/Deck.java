@@ -8,5 +8,7 @@ public interface Deck {
 	public void initialize() throws IOException;
 	public void shuffle();
 	public List<Card> draw(int numOfCards);
+	public Card drawOne();
 	public void add(List<Card> cardsToAdd);
+	public void add(Card cardToAdd);
 }

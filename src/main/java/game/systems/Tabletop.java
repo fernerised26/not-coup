@@ -1,11 +1,15 @@
 package game.systems;
 
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.UUID;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
@@ -14,18 +18,25 @@ import org.springframework.stereotype.Component;
 
 import game.pieces.Card;
 import game.pieces.Deck;
+import game.pieces.Roles;
 import game.pieces.impl.DeckImpl;
+import game.pieces.impl.MogulCard;
 import game.systems.web.PlayerController;
 import game.systems.web.TableController;
 
 @Component
 public class Tabletop {
 	
+	private static final long INTERRUPT_WAIT_MS = 10000L;
+	private static final Player DUMMY_PLAYER = new Player(null, null);
+	
 	private boolean roundActive = false;
 	private Map<String, Player> playerMap = new LinkedHashMap<>(); //Linked to maintain a play order
 	private JSONArray orderedPlayerNames;
 	private Deck deck = new DeckImpl();
 	private Player currActivePlayer = null;
+	private ExecutorService interruptThreadPool = Executors.newCachedThreadPool();
+	private Map<String, Interrupt> interruptibles = new HashMap<>();
 	
 	@Autowired
 	private PlayerController playerController;
@@ -38,7 +49,16 @@ public class Tabletop {
 			if(roundActive) {
 				return null;
 			}
-			playerMap.put(name, new Player(name, secret));
+			Player newPlayer = new Player(name, secret);
+			if(playerMap.size() == 0) {
+				orderedPlayerNames = new JSONArray();
+			} else {
+				Player prevPlayer = playerMap.get(orderedPlayerNames.get(orderedPlayerNames.size()-1));
+				newPlayer.setPrevPlayer(prevPlayer);
+				prevPlayer.setNextPlayer(newPlayer);
+			}
+			orderedPlayerNames.add(name);
+			playerMap.put(name, newPlayer);
 			String playerListHtml = convertSetToHtml(playerMap.keySet());
 			tableController.notifyTableOfPlayerChange(playerListHtml);
 			return playerListHtml;
@@ -63,7 +83,11 @@ public class Tabletop {
 		synchronized(playerMap) {
 			roundActive = true;
 			deck.initialize();
-			orderedPlayerNames = new JSONArray();
+			Player lastPlayerToJoin = playerMap.get(orderedPlayerNames.get(orderedPlayerNames.size()-1));
+			Player firstPlayerToJoin = playerMap.get(orderedPlayerNames.get(0));
+			lastPlayerToJoin.setNextPlayer(firstPlayerToJoin);
+			firstPlayerToJoin.setPrevPlayer(lastPlayerToJoin);
+			
 			for(Entry<String, Player> playerEntry : playerMap.entrySet()) {
 				Player currPlayer = playerEntry.getValue();
 				
@@ -73,7 +97,6 @@ public class Tabletop {
 //				System.out.println("cards drawn: "+cardsDrawn);
 				currPlayer.addCardsInit(cardsDrawn);
 				currPlayer.addCoins(2);
-				orderedPlayerNames.add(playerEntry.getKey());
 				
 //				System.out.println("finished dealing "+ currPlayer);
 			}
@@ -128,8 +151,222 @@ public class Tabletop {
 	
 	public void handlePayday() {
 		currActivePlayer.addCoins(1);
-		advanceActivePlayer();
+		advanceActivePlayer(); //Not possible to win or lose off this action
+		sendUpdatedBoardToPlayers();
+	}
+	
+	//Attempt crowdfund
+	public void handleCrowdfund() {
+		String crowdfundId = UUID.randomUUID().toString();
 		
+		CrowdfundInterrupt interrupt = new CrowdfundInterrupt(crowdfundId, INTERRUPT_WAIT_MS);
+		InterruptDefaultResolver interruptKillswitch = new InterruptDefaultResolver(interrupt, INTERRUPT_WAIT_MS, this, Action.CROWDFUND);
+		interruptibles.put(crowdfundId, interrupt);
+		
+		JSONObject returnObj = buildInterruptOppRsp(currActivePlayer.getName(), "crowdfund", crowdfundId, currActivePlayer.getName()+" attempts to crowdfund");
+		
+		tableController.notifyTableOfGroupCounterOpp(returnObj.toJSONString());
+		interruptThreadPool.submit(interruptKillswitch);
+	}
+	
+	//Crowdfund interrupted by Counter (Mogul)
+	public void handleInterruptCrowdfundCounter(String interruptId, String interruptingPlayer) {
+		Interrupt activeCrowdfundInterrupt = null;
+		synchronized(interruptibles) {
+			if(interruptibles.containsKey(interruptId)) {
+				activeCrowdfundInterrupt = interruptibles.get(interruptId);
+				interruptibles.remove(interruptId);
+			}
+		}
+		
+		if(activeCrowdfundInterrupt != null) {
+			activeCrowdfundInterrupt.setActive(false);
+			String counterId = UUID.randomUUID().toString();
+			CrowdfundCounterInterrupt interrupt = new CrowdfundCounterInterrupt(counterId, INTERRUPT_WAIT_MS, interruptingPlayer, InterruptCase.CROWDFUND_COUNTER);
+			InterruptDefaultResolver interruptKillswitch = new InterruptDefaultResolver(interrupt, INTERRUPT_WAIT_MS, this, Action.CROWDFUND_COUNTER);
+			interruptibles.put(counterId, interrupt);
+			
+			JSONObject returnObj = buildInterruptOppRsp(interruptingPlayer, "crowdfundCounter", counterId, interruptingPlayer+" blocks the crowdfund");
+			
+			tableController.notifyTableOfChallengeOpp(returnObj.toJSONString());
+			interruptThreadPool.submit(interruptKillswitch);
+		}
+	}
+	
+	//Route challenges to appropriate sub-method
+	public void handleChallenge(String interruptId, String interruptingPlayer) {
+		Interrupt challengeableInterrupt = null;
+		synchronized(interruptibles) {
+			if(interruptibles.containsKey(interruptId)) {
+				challengeableInterrupt = interruptibles.get(interruptId);
+				interruptibles.remove(interruptId);
+			}
+		}
+		InterruptCase interruptCase = challengeableInterrupt.getInterruptCase();
+		switch(interruptCase) {
+			case CROWDFUND_COUNTER:
+				CrowdfundCounterInterrupt castedInterrupt = (CrowdfundCounterInterrupt) challengeableInterrupt;
+				handleInterruptCrowdfundCounterChallenge(interruptingPlayer, castedInterrupt);
+				break;
+		}
+	}
+	
+	//Counter to crowdfund interrupted by challenge
+	public void handleInterruptCrowdfundCounterChallenge(String interruptingPlayer, CrowdfundCounterInterrupt activeCrowdfundCounterInterrupt) {	
+		if(activeCrowdfundCounterInterrupt != null) {
+			activeCrowdfundCounterInterrupt.setActive(false);
+			
+			String challengeId = UUID.randomUUID().toString();
+			String challenged = activeCrowdfundCounterInterrupt.getCounterer();
+			ChallengeInterrupt interrupt = new ChallengeInterrupt(challengeId, challenged, interruptingPlayer, Action.CROWDFUND_COUNTER);
+			interruptibles.put(challengeId, interrupt);
+			
+			Player challengedPlayer = playerMap.get(challenged);
+			int validIndices = -1;
+			try {
+				validIndices = getValidChallengeResponseIndices(challengedPlayer);
+			} catch (Exception e) {
+				tableController.notifyTableOfUnauthorizedActivity("Challenged player should have already lost: "+challenged);
+				e.printStackTrace();
+				return;
+			}
+			
+			JSONObject returnObj = buildChallengePhase1Rsp(challenged, interruptingPlayer, challengeId, interruptingPlayer+" challenges Mogul of "+challenged, validIndices);
+			
+			tableController.notifyTableOfChallenge(returnObj.toJSONString());
+		}
+	}
+	
+	public void handleInterruptChallengeResponse(String interruptId, int cardIndexRsp) {
+		ChallengeInterrupt challengeInterrupt = null;
+		synchronized(interruptibles) {
+			if(interruptibles.containsKey(interruptId)) {
+				challengeInterrupt = (ChallengeInterrupt) interruptibles.get(interruptId);
+				interruptibles.remove(interruptId);
+			}
+		}
+		
+		if(challengeInterrupt != null) {
+			challengeInterrupt.setActive(false);
+			String challenged = challengeInterrupt.getChallenged();
+			switch(challengeInterrupt.getActionChallenged()) {
+				case CROWDFUND_COUNTER:
+					Player challengedPlayer = playerMap.get(challengeInterrupt.getChallenged());
+					if(cardIndexRsp == 0 || cardIndexRsp == 1) {
+						Card revealedCard = challengedPlayer.revealCardInHand(cardIndexRsp);
+						if(Roles.MOGUL.equals(revealedCard.getRole())) {
+							String challengeLossId = UUID.randomUUID().toString();
+							String challenger = challengeInterrupt.getChallenger();
+							ChallengeInterrupt interrupt = new ChallengeInterrupt(challengeLossId, challenged, challenger, Action.CROWDFUND_COUNTER_CHALLENGE_LOSS, cardIndexRsp);
+							interruptibles.put(challengeLossId, interrupt);
+							
+							sendUpdatedBoardToPlayers(); //show revealed card
+							
+							Player challengerPlayer = playerMap.get(challenger);
+							int validIndices = -1;
+							try {
+								validIndices = getValidChallengeResponseIndices(challengerPlayer);
+							} catch (Exception e) {
+								tableController.notifyTableOfUnauthorizedActivity("Challenged player should have already lost: "+challenged);
+								e.printStackTrace();
+								return;
+							}
+							
+							JSONObject returnObj = buildChallengePhase2Rsp(challenger, challengeLossId, challenger+" loses the challenge", validIndices);
+							tableController.notifyTableOfChallengeLoss(returnObj.toJSONString());
+						} else {
+							if(challengedPlayer.getCardInHand(cardIndexRsp).isEliminated()) {
+								tableController.notifyTableOfUnauthorizedActivity("Player attempted to eliminate an already eliminated card: "+challenged+"| "+cardIndexRsp);
+								return;
+							}
+							challengedPlayer.eliminateCardInHand(cardIndexRsp);
+							
+							Player winnerCandidate = checkForWinner(challengedPlayer);
+							if(!DUMMY_PLAYER.equals(winnerCandidate)) {
+								return;
+							}
+
+							currActivePlayer.addCoins(2);
+							advanceActivePlayer();
+							sendUpdatedBoardToPlayers();
+						}
+					} else {
+						tableController.notifyTableOfUnauthorizedActivity("Invalid card index (not 0 or 1) from "+challenged+": "+cardIndexRsp);
+					}
+					break;
+			default:
+				tableController.notifyTableOfUnauthorizedActivity("Invalid challenge received for "+challengeInterrupt.getActionChallenged()+" by "+challenged);
+				break;
+			}
+		}
+	}
+	
+	public void handleInterruptSuccessfulChallengeDefense(String interruptId, int cardIndexRsp) {
+		ChallengeInterrupt challengeInterrupt = null;
+		synchronized(interruptibles) {
+			if(interruptibles.containsKey(interruptId)) {
+				challengeInterrupt = (ChallengeInterrupt) interruptibles.get(interruptId);
+				interruptibles.remove(interruptId);
+			}
+		}
+		
+		if(challengeInterrupt != null) {
+			challengeInterrupt.setActive(false);
+			String challenged = challengeInterrupt.getChallenged();
+			switch(challengeInterrupt.getActionChallenged()) {
+				case CROWDFUND_COUNTER:
+					String challenger = challengeInterrupt.getChallenger();
+					Player challengerPlayer = playerMap.get(challenger);
+					Player challengedPlayer = playerMap.get(challenged); 
+					if(cardIndexRsp == 0 || cardIndexRsp == 1) {
+						if(challengerPlayer.getCardInHand(cardIndexRsp).isEliminated()) {
+							tableController.notifyTableOfUnauthorizedActivity("Player attempted to eliminate an already eliminated card: "+challenger+"| "+cardIndexRsp);
+							return;
+						}
+						challengerPlayer.eliminateCardInHand(cardIndexRsp);
+						Player winnerCandidate = checkForWinner(challengerPlayer);
+						if(!DUMMY_PLAYER.equals(winnerCandidate)) {
+							return;
+						}
+						
+						int defenderIndexCardToReplace = challengeInterrupt.getRevealedDefendingCardIndex();
+						Card defendedCard = challengedPlayer.getCardInHand(challengeInterrupt.getRevealedDefendingCardIndex());
+						deck.add(defendedCard);
+						deck.shuffle();
+						challengedPlayer.replaceCardInHand(deck.drawOne(), defenderIndexCardToReplace);
+						
+						advanceActivePlayer();
+						sendUpdatedBoardToPlayers();
+					} else {
+						tableController.notifyTableOfUnauthorizedActivity("Invalid card index (not 0 or 1) from "+challenger+": "+cardIndexRsp);
+					}
+					break;
+				default:
+					tableController.notifyTableOfUnauthorizedActivity("Invalid challenge defense received for "+challengeInterrupt.getActionChallenged()+" by "+challenged);
+					break;
+			}
+		}
+	}
+	
+	public void resolveCrowdfund(String interruptId, boolean isSuccess) {
+		Interrupt activeInterrupt = null;
+		synchronized(interruptibles) {
+			if(interruptibles.containsKey(interruptId)) {
+				activeInterrupt = interruptibles.get(interruptId);
+				interruptibles.remove(interruptId);
+			}
+		}
+		
+		if(activeInterrupt != null) {
+			if(isSuccess) {
+				currActivePlayer.addCoins(2);
+			}
+			advanceActivePlayer();
+			sendUpdatedBoardToPlayers();
+		}
+	}
+	
+	private void sendUpdatedBoardToPlayers() { //multithread this
 		JSONObject returnObj = new JSONObject();
 		returnObj.put("activePlayer", currActivePlayer.getName());
 		for(Entry<String, Player> playerEntry : playerMap.entrySet()) {
@@ -140,17 +377,48 @@ public class Tabletop {
 		}
 	}
 	
-	private void advanceActivePlayer() {
-		System.out.println("Advancing player");
-		System.out.println(playerMap);
-		System.out.println(orderedPlayerNames);
-		int currActiveIndex = orderedPlayerNames.indexOf(currActivePlayer.getName());
-		System.out.println("currActiveIndex: "+currActiveIndex);
-		int newActiveIndex = (currActiveIndex + 1) == orderedPlayerNames.size() ? 0 : (currActiveIndex + 1);
-		System.out.println("newActiveIndex: "+newActiveIndex);
-		System.out.println("active name 1: " + currActivePlayer.getName());
-		currActivePlayer = playerMap.get(orderedPlayerNames.get(newActiveIndex));
-		System.out.println("active name 1: " + currActivePlayer.getName());
+	private boolean advanceActivePlayer() {
+		System.out.println("CurrActivePlayer: "+currActivePlayer);
+		Player candidateActivePlayer = currActivePlayer.getNextPlayer();
+		while(candidateActivePlayer.isLost()) {
+			System.out.println("CandidateActivePlayer: "+candidateActivePlayer);
+			if(currActivePlayer.equals(candidateActivePlayer)){
+				return true; //currentActivePlayer is winner
+			}
+			candidateActivePlayer = candidateActivePlayer.getNextPlayer();
+		}
+		currActivePlayer = candidateActivePlayer;
+		return false;
+	}
+	
+	private Player checkForWinner(Player playerAtRisk) {
+		if(playerAtRisk.getCardInHand(0).isFaceUp() && playerAtRisk.getCardInHand(1).isFaceUp()) {
+			playerAtRisk.eliminatePlayer();
+			Player tempPlayer = null;
+			boolean onePlayerNotLost = false;
+			for(Entry<String, Player> playerEntry : playerMap.entrySet()) {
+				boolean isCurrentPlayerLost = playerEntry.getValue().isLost();
+				if(!isCurrentPlayerLost) {
+					if(onePlayerNotLost && isCurrentPlayerLost) {
+						return null; //no winner yet
+					} else {
+						onePlayerNotLost = true;
+						tempPlayer = playerEntry.getValue();
+					}
+				}
+			}
+			
+			if(onePlayerNotLost) {
+				JSONObject returnObj = buildWinnerRsp(tempPlayer.getName(), tempPlayer.getName()+" is the winner!");
+				tableController.notifyTableOfWinner(returnObj.toJSONString());
+				return tempPlayer; //Sole survivor is winner
+			} else {
+				tableController.notifyTableOfUnauthorizedActivity("All players lost, should not be possible");
+				return DUMMY_PLAYER;
+			}
+		} else {
+			return DUMMY_PLAYER;
+		}
 	}
 
 	private String convertSetToHtml(Set<String> playerSet) {
@@ -160,4 +428,53 @@ public class Tabletop {
 		}
 		return sb.toString();
 	}
+	
+	private JSONObject buildInterruptOppRsp(String atRiskPlayer, String interruptFor, String interruptId, String msg) {
+		JSONObject returnObj = new JSONObject();
+		returnObj.put("atRiskPlayer", atRiskPlayer);
+		returnObj.put("interruptFor", interruptFor);
+		returnObj.put("interruptId", interruptId);
+		returnObj.put("rspWindowMs", INTERRUPT_WAIT_MS);
+		returnObj.put("msg", msg);
+		return returnObj;
+	}
+	
+	private JSONObject buildChallengePhase1Rsp(String challenged, String challenger, String interruptId, String msg, int validIndices) {
+		JSONObject returnObj = new JSONObject();
+		returnObj.put("challenged", challenged);
+		returnObj.put("interruptId", interruptId);
+		returnObj.put("msg", msg);
+		returnObj.put("valid", validIndices);
+		return returnObj;
+	}
+	
+	private JSONObject buildChallengePhase2Rsp(String challenger, String interruptId, String msg, int validIndices) {
+		JSONObject returnObj = new JSONObject();
+		returnObj.put("challenger", challenger);
+		returnObj.put("interruptId", interruptId);
+		returnObj.put("msg", msg);
+		returnObj.put("valid", validIndices);
+		return returnObj;
+	}
+	
+	private JSONObject buildWinnerRsp(String winnerName, String msg) {
+		JSONObject returnObj = new JSONObject();
+		returnObj.put("winner", winnerName);
+		returnObj.put("msg", msg);
+		return returnObj;
+	}
+	
+	private int getValidChallengeResponseIndices(Player playerToReveal) throws Exception {
+		Card card0 = playerToReveal.getCardInHand(0);
+		Card card1 = playerToReveal.getCardInHand(1);
+		if(!card0.isFaceUp() && !card1.isFaceUp()) {
+			return 2;
+		} else if(card0.isFaceUp() && !card1.isFaceUp()) {
+			return 1;
+		} else if(card1.isFaceUp() && !card0.isFaceUp()) {
+			return 0;
+		} 
+		throw new GameException("Player should have already lost: "+playerToReveal.getName());
+	}
 }
+

@@ -8,8 +8,18 @@ public class NetOpsCard extends Card {
 	public static Roles ROLE = Roles.NETOPS;
 	
 	private String name = "NetOps";
-	
+	private String eliminatedName = "NetOpsElim";
+
 	public String toString() {
-		return name;
+		if(isEliminated()) {
+			return eliminatedName;
+		} else {
+			return name;
+		}
+	}
+	
+	@Override
+	public Roles getRole() {
+		return ROLE;
 	}
 }

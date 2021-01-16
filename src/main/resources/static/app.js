@@ -4,6 +4,7 @@ var playerOrder = null;
 var divNamesByPlayerNames = null;
 var mySecret = null;
 var activeDivNames = null;
+var latestInterruptId = null;
 
 const twoPlayerDivNames = ["self-player", "2p1"];
 const threePlayerDivNames = ["self-player", "3p1", "3p2"];
@@ -17,6 +18,11 @@ const hitmanImgSrc = "imgs/Hitman.svg"
 const mogulImgSrc = "imgs/Mogul.svg"
 const netOpsImgSrc = "imgs/NetOps.svg"
 const unrevealedImgSrc = "imgs/Unrevealed.svg"
+const captainElimImgSrc = "imgs/CaptainElim.svg";
+const decoyElimImgSrc = "imgs/DecoyElim.svg";
+const hitmanElimImgSrc = "imgs/HitmanElim.svg"
+const mogulElimImgSrc = "imgs/MogulElim.svg"
+const netOpsElimImgSrc = "imgs/NetOpsElim.svg"
 
 const captainHoverText = "[Captain]\nEnables [Raid]\nCounters [Raid]"
 const decoyHoverText = "[Decoy]\nCounters [Order Hit]";
@@ -63,6 +69,16 @@ counterCrowdfundButton.setAttribute("id","countercrowdfund");
 counterCrowdfundButton.setAttribute("class","btn cntr-btn");
 counterCrowdfundButton.setAttribute("title","Counter a crowdfund by claiming a Mogul card");
 counterCrowdfundButton.setAttribute("type","submit");
+
+var progressBarParent = document.createElement("div");
+progressBarParent.className = "progress";
+progressBarParent.id = "singleton-progress-bar";
+var progressBarChild = document.createElement("div");
+progressBarChild.className = "progress-bar progress-bar-striped progress-bar-animated";
+progressBarChild.setAttribute("role", "progressbar");
+progressBarChild.setAttribute("aria-valuemin", "0");
+progressBarChild.setAttribute("aria-valuemax", "100");
+progressBarParent.appendChild(progressBarChild);
 
 function enableJoin(){
 	$("#name").prop("disabled", false);
@@ -141,46 +157,180 @@ function reactLobbyEvent(message) {
 		case "playerchange":
 			$("#players").html(message.body);
 			break;
-		case "roundstart":
-			$("#log-window").html(message.body.msg);
+		case "unauthorized":
+			$("#log-window").html(message.body);
 			break;
-		case "activeplayer":
-			let activePlayerName = message.body;
-			let selfIsActive = (activePlayerName === myName);
-			let actBtns = document.getElementsByClassName("act-btn");
-			for(let btnIdx=0; btnIdx < actBtns.length; btnIdx++){
-				actBtns[btnIdx].disabled =  !selfIsActive;
+		case "fail": {
+				let failMsg = JSON.parse(message.body);
+				$("#log-window").html(failMsg.msg);
 			}
-			let currActiveCell = document.getElementsByClassName("active-cell");
-			if(currActiveCell.length > 0){
-				currActiveCell[0].classList.remove("active-cell");
-			}
-			let activePlayerIndex = playerOrder.findIndex("activePlayerName");
-			document.getElementById(activeDivNames[activePlayerIndex]);
 			break;
+		case "simpmsg":{
+				let simpMsg = JSON.parse(message.body);
+				let center = document.getElementById("cell-2-3");
+				center.innerHTML = simpMsg.msg;
+			}
+			break;
+		case "groupcounteropp": {
+				cleanupInterrupt();
+				let center = document.getElementById("cell-2-3");
+				let topCenter = document.getElementById("cell-2-2");
+				
+				let groupCounterMsg = JSON.parse(message.body);
+				let playerToCounter = groupCounterMsg.atRiskPlayer;
+				let rspWindowMs = groupCounterMsg.rspWindowMs;
+				
+				progressBarChild.setAttribute("aria-valuenow", "100");
+				progressBarChild.style.width = "100%";
+				progressBarChild.innerText = (rspWindowMs / 1000) + "secs";
+				
+				if(myName !== playerToCounter){
+					console.log("parsing group counter")
+					console.log(groupCounterMsg);
+					latestInterruptId = groupCounterMsg.interruptId;
+					let actionToCounter = groupCounterMsg.interruptFor;
+					
+					console.log(latestInterruptId);
+					console.log(actionToCounter);
+					let bottomRight = document.getElementById("cell-5-3");
+					center.innerHTML = groupCounterMsg.msg;
+					switch(actionToCounter){
+						case "crowdfund":
+							bottomRight.appendChild(counterCrowdfundButton);
+							bottomRight.appendChild(skipButton);
+							break;
+						default:
+							console.log("Unknown action to counter: "+actionToCounter); 
+					}
+				} else {
+					center.innerHTML = "Waiting for other players...";
+				}
+				topCenter.appendChild(progressBarParent);
+				updateProgressBar(100, 0, rspWindowMs, groupCounterMsg.interruptId);
+			}
+			break;
+		case "challengeopp": {
+				cleanupInterrupt();
+				let center = document.getElementById("cell-2-3");
+				let topCenter = document.getElementById("cell-2-2");
+				
+				let groupCounterMsg = JSON.parse(message.body);
+				let playerToChallenge = groupCounterMsg.atRiskPlayer;
+				let rspWindowMs = groupCounterMsg.rspWindowMs;
+				
+				progressBarChild.setAttribute("aria-valuenow", "100");
+				progressBarChild.style.width = "100%";
+				progressBarChild.innerText = (rspWindowMs / 1000) + "secs";
+				
+				if(myName !== playerToChallenge){
+					latestInterruptId = groupCounterMsg.interruptId;
+					let actionToChallenge = groupCounterMsg.interruptFor;
+					let bottomRight = document.getElementById("cell-5-3");
+					center.innerHTML = groupCounterMsg.msg;
+					switch(actionToChallenge){
+						case "crowdfundCounter":
+							bottomRight.appendChild(challengeButton);
+							bottomRight.appendChild(skipButton);
+							break;
+						default:
+							console.log("Unknown action to counter: "+actionToChallenge); 
+					}
+				} else {
+					center.innerHTML = "Waiting for other players...";
+				}
+				topCenter.appendChild(progressBarParent);
+				updateProgressBar(100, 0, rspWindowMs, groupCounterMsg.interruptId);
+			}
+			break;
+		case "challenge": {
+				cleanupInterrupt();
+				let center = document.getElementById("cell-2-3");
+				
+				let challengeMsg = JSON.parse(message.body);
+				let challenged = challengeMsg.challenged;
+				let validIndices = challengeMsg.valid;
+				
+				if(myName === challenged){
+					latestInterruptId = challengeMsg.interruptId;
+					center.innerHTML = "You have been challenged. Select a card in your hand to reveal."
+					let myPlayerSpot = document.getElementById("self-player");
+					let card1Div = myPlayerSpot.getElementsByClassName("card-1")[0];
+					let card2Div = myPlayerSpot.getElementsByClassName("card-2")[0];
+					enableValidClickableCards(card1Div, card2Div, validIndices);
+				} else {
+					center.innerHTML = challengeMsg.msg;
+				}
+			}
+			break;
+		case "challengeloss": {
+				cleanupInterrupt();
+				let center = document.getElementById("cell-2-3");
+				
+				let challengeMsg = JSON.parse(message.body);
+				let challenger = challengeMsg.challenger;
+				let validIndices = challengeMsg.valid;
+				
+				if(myName === challenger){
+					latestInterruptId = challengeMsg.interruptId;
+					center.innerHTML = "You lost your challenge. Select a card in your hand to lose."
+					let myPlayerSpot = document.getElementById("self-player");
+					let card1Div = myPlayerSpot.getElementsByClassName("card-1")[0];
+					let card2Div = myPlayerSpot.getElementsByClassName("card-2")[0];
+					enableValidClickableCards(card1Div, card2Div, validIndices);
+				} else {
+					center.innerHTML = challengeMsg.msg;
+				}
+			}
+			break;
+		case "roundend": {
+			cleanupInterrupt();
+				let center = document.getElementById("cell-2-3");
+				let roundEndMsg = JSON.parse(message.body);
+				center.innerHTML = roundEndMsg.msg;
+				for(let btnIdx=0; btnIdx < actBtns.length; btnIdx++){
+					actBtns[btnIdx].disabled =  true;
+				}
+		}
 		default:
-			console.log("Unknown case");
+			console.log("Unknown lobby header");
 			console.log(message);
+	}
+}
+
+function updateProgressBar(updateIntervalMs, elapsedMs, maxMs, interruptId){
+	let newElapsed = elapsedMs + updateIntervalMs;
+	let percentRemaining = ((maxMs - newElapsed) / maxMs) * 100;
+	progressBarChild.style.width = percentRemaining+"%";
+	progressBarChild.setAttribute("aria-valuenow", percentRemaining);
+	progressBarChild.innerText = ((maxMs - newElapsed) / 1000) + "secs";
+	if(parseInt(percentRemaining) >= 0 && interruptId === latestInterruptId){
+		setTimeout(function(){
+			updateProgressBar(updateIntervalMs, newElapsed, maxMs, interruptId);
+		}, updateIntervalMs);	
+	} else {
+		cleanupInterrupt();
 	}
 }
 
 function reactPersonalEvent(message){
 	let headerCase = message.headers.case;
 	switch(headerCase){
-		case "init":
-			document.getElementById("startRound").disabled = true;
-			let tableStarter = JSON.parse(message.body);
-			let myPlayerSpot = document.getElementById("self-player");
-			let myPlayerSpotHotElems = initPlayerBox(myPlayerSpot, myName);
-			updatePlayerPieces(myPlayerSpotHotElems, tableStarter.boardState[myName]);
-			let masterPlayerOrder = JSON.parse(message.headers.order);
-			initPlayers(tableStarter.boardState, masterPlayerOrder);
-			handleActivePlayer(tableStarter.activePlayer);
+		case "init": {
+				document.getElementById("startRound").disabled = true;
+				let tableStarter = JSON.parse(message.body);
+				let myPlayerSpot = document.getElementById("self-player");
+				let myPlayerSpotHotElems = initPlayerBox(myPlayerSpot, myName);
+				updatePlayerPieces(myPlayerSpotHotElems, tableStarter.boardState[myName]);
+				let masterPlayerOrder = JSON.parse(message.headers.order);
+				initPlayers(tableStarter.boardState, masterPlayerOrder);
+				handleActivePlayer(tableStarter.activePlayer);
+			}
 			break;
-		case "update":
-			let tableState = JSON.parse(message.body);
-			updateGamePieces(tableState.boardState);
-			handleActivePlayer(tableState.activePlayer);
+		case "update": {
+				let tableState = JSON.parse(message.body);
+				updateGamePieces(tableState.boardState);
+				handleActivePlayer(tableState.activePlayer);
+			}
 			break;
 		default:
 			console.log("Unknown case");
@@ -313,31 +463,32 @@ function initPlayers(tableStarter, masterPlayerOrder){
 
 function updatePlayerPieces(playerDivChildren, playerObj){
 	playerDivChildren[0].innerHTML = playerObj.coins;
-	let card1Img = document.createElement("IMG");
+	
 	let card1ImgData = getCardImageData(playerObj.cardsOwned[0]);
-	if(card1ImgData === null){
+	let card2ImgData = getCardImageData(playerObj.cardsOwned[1]);
+	if(card1ImgData === null || card2ImgData === null){
 		console.log("Error updating player state");
 		return;
 	}
-	card1Img.setAttribute("src", card1ImgData[0]);
-	card1Img.setAttribute("title", card1ImgData[1]);
-	card1Img.setAttribute("height", "100%");
-	card1Img.setAttribute("width", "100%");
-	let card2Img = document.createElement("IMG");
-	let card2ImgData = getCardImageData(playerObj.cardsOwned[1]);
-	card2Img.setAttribute("src", card2ImgData[0]);
-	card2Img.setAttribute("title", card2ImgData[1]);
-	card2Img.setAttribute("height", "100%");
-	card2Img.setAttribute("width", "100%");
-	if(playerDivChildren[1].firstElementChild !== null){
-		playerDivChildren[1].replaceChild(card1Img, playerDivChildren[1].firstElementChild)
+	let currCard1 = playerDivChildren[1].firstElementChild;
+	if(currCard1 !== null){
+		if(currCard1.dataset.cardName !== card1ImgData[2]){
+			let card1Img = getCardDomImgObj(card1ImgData);
+			playerDivChildren[1].replaceChild(card1Img, playerDivChildren[1].firstElementChild)
+		}
 	} else {
+		let card1Img = getCardDomImgObj(card1ImgData);
 		playerDivChildren[1].appendChild(card1Img);
 	}
 	
-	if(playerDivChildren[2].firstElementChild !== null){
-		playerDivChildren[2].replaceChild(card2Img, playerDivChildren[2].firstElementChild)
+	let currCard2 = playerDivChildren[2].firstElementChild;
+	if(currCard2 !== null){
+		if(currCard2.dataset.cardName !== card2ImgData[2]){
+			let card2Img = getCardDomImgObj(card2ImgData);
+			playerDivChildren[2].replaceChild(card2Img, playerDivChildren[2].firstElementChild)
+		}
 	} else {
+		let card2Img = getCardDomImgObj(card2ImgData);
 		playerDivChildren[2].appendChild(card2Img);
 	}
 }
@@ -345,20 +496,40 @@ function updatePlayerPieces(playerDivChildren, playerObj){
 function getCardImageData(cardName){
 	switch(cardName){
 		case "Captain":
-			return [captainImgSrc, captainHoverText];
+			return [captainImgSrc, captainHoverText, cardName];
 		case "Decoy":
-			return [decoyImgSrc, decoyHoverText];
+			return [decoyImgSrc, decoyHoverText, cardName];
 		case "Hitman":
-			return [hitmanImgSrc, hitmanHoverText];
+			return [hitmanImgSrc, hitmanHoverText, cardName];
 		case "Mogul":
-			return [mogulImgSrc, mogulHoverText];
+			return [mogulImgSrc, mogulHoverText, cardName];
 		case "NetOps":
-			return [netOpsImgSrc, netOpsHoverText];
+			return [netOpsImgSrc, netOpsHoverText, cardName];
+		case "CaptainElim":
+			return [captainElimImgSrc, captainHoverText, cardName];
+		case "DecoyElim":
+			return [decoyElimImgSrc, decoyHoverText, cardName];
+		case "HitmanElim":
+			return [hitmanElimImgSrc, hitmanHoverText, cardName];
+		case "MogulElim":
+			return [mogulElimImgSrc, mogulHoverText, cardName];
+		case "NetOpsElim":
+			return [netOpsElimImgSrc, netOpsHoverText, cardName];
 		case "FACEDOWN":
-			return [unrevealedImgSrc, unrevealedHoverText];
+			return [unrevealedImgSrc, unrevealedHoverText, cardName];
 		default:
 			console.log("Invalid Card Name:"+cardName);
 	}
+}
+
+function getCardDomImgObj(cardImgData){
+	let cardImg = document.createElement("IMG");
+	cardImg.setAttribute("src", cardImgData[0]);
+	cardImg.setAttribute("title", cardImgData[1]);
+	cardImg.setAttribute("height", "100%");
+	cardImg.setAttribute("width", "100%");
+	cardImg.setAttribute("data-cardName", cardImgData[2])
+	return cardImg;
 }
 
 //	stompClient.send("/app/gameaction", {}, myName);
@@ -398,16 +569,117 @@ function voidOut() {
 //	stompClient.send("/app/voidout", {}, mySecret);
 }
 
-function testButton() {
-	let me = document.getElementById("self-player");
-//	bottomright.style.border = "5px solid #ff00ff";
-//	console.log(bottomright.classList);
-	if(me.classList.contains("active-cell")){
-		me.classList.remove("active-cell");
-	} else {
-		me.classList.add("active-cell");	
-	}
+function challenge(){
+	cleanupInterrupt();
+	stompClient.send("/app/challenge", 
+		{"secret":mySecret}, 
+		JSON.stringify({"interruptId":latestInterruptId, "interrupter":myName}));
+	latestInterruptId = null;
+}
+
+function counterCrowdfund(){
+	cleanupInterrupt();
+	stompClient.send("/app/crowdfundcounter", 
+		{"secret":mySecret}, 
+		JSON.stringify({"interruptId":latestInterruptId, "interrupter":myName}));
+	latestInterruptId = null;
+}
+
+function counterStealAsNetOps(){
+	cleanupInterrupt();
 	
+	latestInterruptId = null;
+}
+
+function counterStealAsCaptain(){
+	cleanupInterrupt();
+	
+	latestInterruptId = null;
+}
+
+function counterHit(){
+	cleanupInterrupt();
+	
+	latestInterruptId = null;
+}
+
+function enableValidClickableCards(card1Div, card2Div, validIndices){
+	switch(validIndices) {
+		case 2: 
+			card1Div.classList.add("hoverable-card");
+			card2Div.classList.add("hoverable-card");
+			card1Div.addEventListener("click", respond1Card1);
+			card2Div.addEventListener("click", respond1Card2);
+			break;
+		case 1:
+			card2Div.classList.add("hoverable-card");
+			card2Div.addEventListener("click", respond1Card2);
+			break;
+		case 0:
+			card1Div.classList.add("hoverable-card");
+			card1Div.addEventListener("click", respond1Card1);
+			break;
+		default:
+			console.log("Unknown validity code for challenge response:"+validIndices);
+	}
+}
+
+function respond1Card1(){
+	let cardDivs = cleanupChallengeResponse(); 
+	cardDivs[0].removeEventListener("click", respond1Card1);
+	cardDivs[1].removeEventListener("click", respond1Card2);
+	stompClient.send("/app/challengeresponse1", 
+		{"secret":mySecret}, 
+		JSON.stringify({"interruptId":latestInterruptId, "cardIndex":0}));
+}
+
+function respond1Card2(){
+	let cardDivs = cleanupChallengeResponse(); 
+	cardDivs[0].removeEventListener("click", respond1Card1);
+	cardDivs[1].removeEventListener("click", respond1Card2);
+	stompClient.send("/app/challengeresponse1", 
+		{"secret":mySecret}, 
+		JSON.stringify({"interruptId":latestInterruptId, "cardIndex":1}));
+}
+
+function respond2Card1(){
+	let cardDivs = cleanupChallengeResponse(); 
+	cardDivs[0].removeEventListener("click", respond2Card1);
+	cardDivs[1].removeEventListener("click", respond2Card2);
+	stompClient.send("/app/challengeresponse2", 
+		{"secret":mySecret}, 
+		JSON.stringify({"interruptId":latestInterruptId, "cardIndex":0}));
+	
+}
+
+function respond2Card2(){
+	let cardDivs = cleanupChallengeResponse(); 
+	cardDivs[0].removeEventListener("click", respond2Card1);
+	cardDivs[1].removeEventListener("click", respond2Card2);
+	stompClient.send("/app/challengeresponse2", 
+		{"secret":mySecret}, 
+		JSON.stringify({"interruptId":latestInterruptId, "cardIndex":1}));
+}
+
+function cleanupChallengeResponse(){
+	let myPlayerSpot = document.getElementById("self-player");
+	let card1Div = myPlayerSpot.getElementsByClassName("card-1")[0];
+	let card2Div = myPlayerSpot.getElementsByClassName("card-2")[0];
+	card1Div.classList.remove("hoverable-card");
+	card2Div.classList.remove("hoverable-card");
+	return [card1Div, card2Div];
+}
+
+function testButton() {
+	let topCenter = document.getElementById("cell-2-2");
+	topCenter.innerHTML = "test1 test2";
+}
+function testButton2() {
+	let topCenter = document.getElementById("cell-2-2");
+//	topCenter.innerHTML = "";
+	progressBarChild.setAttribute("aria-valuenow", "100");
+	progressBarChild.style.width = "100%";
+	topCenter.appendChild(progressBarParent);
 }
 
 function handleActivePlayer(activePlayerName) {
@@ -423,12 +695,15 @@ function handleActivePlayer(activePlayerName) {
 	cellToActivate.classList.add("active-cell");
 }
 
-function initiateRoundReset(){
-	
-}
-
-function roundReset(){
-	stompClient.send("/app/roundreset", {}, myName);
+function cleanupInterrupt(){
+	let bottomRight = document.getElementById("cell-5-3");
+	let topCenter = document.getElementById("cell-2-2");
+	while (bottomRight.firstChild) {
+ 	   bottomRight.removeChild(bottomRight.firstChild);
+	}
+	while (topCenter.firstChild) {
+ 	   topCenter.removeChild(topCenter.firstChild);
+	}
 }
 
 $(function () {
@@ -445,5 +720,14 @@ $(function () {
 	$("#orderhit").click(function() { orderHit(); });
 	$("#raid").click(function() { raid(); });
 	$("#void").click(function() { voidOut(); });
+	counterCrowdfundButton.addEventListener("click", counterCrowdfund);
+	challengeButton.addEventListener("click", challenge);
 	$("#testbutton").click(function() { testButton(); });
+	$("#testbutton2").click(function() { testButton2(); });
 });
+
+//function initiateRoundReset(){
+//}
+//function roundReset(){
+//	stompClient.send("/app/roundreset", {}, myName);
+//}

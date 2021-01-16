@@ -8,8 +8,18 @@ public class HitmanCard extends Card {
 	public static Roles ROLE = Roles.HITMAN;
 	
 	private String name = "Hitman";
-	
+	private String eliminatedName = "HitmanElim";
+
 	public String toString() {
-		return name;
+		if(isEliminated()) {
+			return eliminatedName;
+		} else {
+			return name;
+		}
+	}
+	
+	@Override
+	public Roles getRole() {
+		return ROLE;
 	}
 }
