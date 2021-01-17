@@ -11,8 +11,10 @@ import org.springframework.web.bind.annotation.RestController;
 public class PlayerController {
 	
 	private static final Map<String, Object> UPDATE_HEADER = new HashMap<>();
+	private static final Map<String, Object> TARGETS_HEADER = new HashMap<>();
 	static {
 		UPDATE_HEADER.put("case", "update");
+		TARGETS_HEADER.put("case", "targets");
 	}
 
 	@Autowired
@@ -28,5 +30,9 @@ public class PlayerController {
 	
 	public void contactPlayerUpdateTable(String playerName, String text) {
 		this.msgTemplate.convertAndSend("/queue/"+playerName, text, UPDATE_HEADER);
+	}
+	
+	public void contactPlayerValidTargets(String playerName, String text) {
+		this.msgTemplate.convertAndSend("/queue/"+playerName, text, TARGETS_HEADER);
 	}
 }

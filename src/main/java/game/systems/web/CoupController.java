@@ -248,6 +248,55 @@ public class CoupController {
 		}
 	}
 	
+	@MessageMapping("/voidtargets")
+	public void handleGetVoidTargets(
+			@Payload String body,
+			MessageHeaders headers) {
+		AuthTuple authTuple = isMessageWellFormedForActivePlayerOnVoid(headers, "voidtargets", body);
+		if(authTuple.isWellFormed) {
+			table.handleGetTargets();
+		}
+	}
+	
+	@MessageMapping("/voidout")
+	public void handleVoidout(
+			@Payload String body,
+			MessageHeaders headers) {
+		AuthTuple authTuple = isMessageWellFormedForActivePlayerOnVoid(headers, "voidout", body);
+		if(authTuple.isWellFormed) {
+			if(body != null && !body.isBlank()) {
+				JSONObject parsedJson = handleJsonInput(body, "voidout", headers);
+				if(parsedJson != null) {
+					String voidTarget = (String) parsedJson.get("target");
+					table.handleVoidout(voidTarget);
+				}
+			}
+		}
+	}
+	
+	@MessageMapping("/voidoutresponse")
+	public void handleVoidoutResponse(
+			@Payload String body,
+			MessageHeaders headers) {
+		if(body != null && !body.isBlank()) {
+			JSONObject parsedJson = handleJsonInput(body, "voidoutresponse", headers);
+			if(parsedJson != null) {
+				String interruptId = (String) parsedJson.get("interruptId");
+				AuthTuple authTuple = isMessageWellFormedForInterruptingPlayer(headers, "voidoutresponse", interruptId, body);
+				if(authTuple.isWellFormed) {
+					Integer cardIndex = Integer.valueOf((int) ((long) parsedJson.get("cardIndex")));
+					if(!interruptId.isBlank() && cardIndex != null) {
+						table.handleVoidoutResponse(interruptId, cardIndex);
+					} else {
+						createAndDistributeErrorMsg("voidoutresponse|MissingInterruptData", headers, body);
+					}
+				}
+			}
+		} else {
+			createAndDistributeErrorMsg("voidoutresponse|EmptyBody", headers, body);
+		}
+	}
+	
 	private AuthTuple isMessageWellFormed(MessageHeaders headers, String action, String body) {
 		List<String> secretHeader = (List<String>) ((Map<String, Object>) headers.get("nativeHeaders")).get("secret");
 		List<String> pNameHeader = (List<String>) ((Map<String, Object>) headers.get("nativeHeaders")).get("pname");
@@ -271,7 +320,11 @@ public class CoupController {
 			if(!isActive) {
 				createAndDistributeErrorMsg(action+"|ActivePlayerExpected", headers, body);
 			}
-			return new AuthTuple(stage1AuthResult, isActive);
+			boolean isVoidLocked = table.isPlayerVoidLocked(stage1AuthResult.playerName);
+			if(isVoidLocked) {
+				createAndDistributeErrorMsg(action+"|PlayerIsVoidLocked", headers, body);
+			}
+			return new AuthTuple(stage1AuthResult, (isActive && !isVoidLocked));
 		} else {
 			return stage1AuthResult;
 		}
@@ -288,6 +341,19 @@ public class CoupController {
 				createAndDistributeErrorMsg(action+"|SelfRespondingPlayers", headers, body);
 			}
 			return new AuthTuple(stage1AuthResult, isValid);
+		} else {
+			return stage1AuthResult;
+		}
+	}
+	
+	private AuthTuple isMessageWellFormedForActivePlayerOnVoid(MessageHeaders headers, String action, String body) {
+		AuthTuple stage1AuthResult = isMessageWellFormed(headers, action, body);
+		if(stage1AuthResult.isWellFormed) {
+			boolean isActive = table.isActivePlayer(stage1AuthResult.secret, stage1AuthResult.playerName);
+			if(!isActive) {
+				createAndDistributeErrorMsg(action+"|ActivePlayerExpected", headers, body);
+			}
+			return new AuthTuple(stage1AuthResult, (isActive));
 		} else {
 			return stage1AuthResult;
 		}

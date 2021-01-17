@@ -51,6 +51,10 @@ body {
 	padding: 3px;
 }
 
+.hoverable-player:hover{
+	border: 2px solid #ffa500;
+}
+
 .player-col {
 	height: 100%;
 	padding: 0px;

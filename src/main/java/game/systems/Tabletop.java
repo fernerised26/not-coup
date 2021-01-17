@@ -21,7 +21,6 @@ import game.pieces.Card;
 import game.pieces.Deck;
 import game.pieces.Roles;
 import game.pieces.impl.DeckImpl;
-import game.pieces.impl.MogulCard;
 import game.systems.web.PlayerController;
 import game.systems.web.TableController;
 
@@ -146,6 +145,10 @@ public class Tabletop {
 				&& currActivePlayer.isSecret(secret));
 	}
 	
+	public boolean isPlayerVoidLocked(String playerName) {
+		return playerMap.get(playerName).isVoidLocked();
+	}
+	
 	public boolean isSecretCorrect(String secret, String playerName) {
 		return playerMap.get(playerName).isSecret(secret);
 	}
@@ -243,9 +246,9 @@ public class Tabletop {
 			int validIndices = -1;
 			try {
 				validIndices = getValidChallengeResponseIndices(challengedPlayer);
-			} catch (Exception e) {
+			} catch (GameException e) {
 				tableController.notifyTableOfUnauthorizedActivity("Challenged player should have already lost: "+challenged);
-				e.printStackTrace();
+				System.err.println("Challenged player should have already lost: "+challenged);
 				return;
 			}
 			
@@ -285,9 +288,9 @@ public class Tabletop {
 							int validIndices = -1;
 							try {
 								validIndices = getValidChallengeResponseIndices(challengerPlayer);
-							} catch (Exception e) {
+							} catch (GameException e) {
 								tableController.notifyTableOfUnauthorizedActivity("Challenged player should have already lost: "+challenged);
-								e.printStackTrace();
+								System.err.println("Challenged player should have already lost: "+challenged);
 								return;
 							}
 							
@@ -299,11 +302,11 @@ public class Tabletop {
 								return;
 							}
 							challengedPlayer.eliminateCardInHand(cardIndexRsp);
-							sendUpdatedBoardToPlayers();
 							tableController.notifyTableWithSimpleMessage(challenged+" loses the challenge from "+challenger);
 							
 							Player winnerCandidate = checkForWinner(challengedPlayer);
 							if(!DUMMY_PLAYER.equals(winnerCandidate)) {
+								sendUpdatedBoardToPlayers();
 								return;
 							}
 
@@ -347,6 +350,7 @@ public class Tabletop {
 						challengerPlayer.eliminateCardInHand(cardIndexRsp);
 						Player winnerCandidate = checkForWinner(challengerPlayer);
 						if(!DUMMY_PLAYER.equals(winnerCandidate)) {
+							sendUpdatedBoardToPlayers();
 							return;
 						}
 						
@@ -395,6 +399,85 @@ public class Tabletop {
 			
 			if(responderCount >= (playerMap.size() - 1)) {
 				activeInterrupt.getDefaultResolverFuture().cancel(true);
+			}
+		}
+	}
+	
+	public void handleGetTargets() {
+		JSONObject targetMsg = new JSONObject();
+		JSONArray validTargets = new JSONArray();
+		for(Entry<String, Player> playerEntry : playerMap.entrySet()) {
+			Player currPlayer = playerEntry.getValue();
+			boolean isCurrentPlayerLost = currPlayer.isLost();
+			if(!isCurrentPlayerLost && !currPlayer.equals(currActivePlayer)) {
+				validTargets.add(currPlayer.getName());
+			}
+		}
+		targetMsg.put("targets", validTargets);
+		targetMsg.put("msg", "Select an opponent to void");
+		playerController.contactPlayerValidTargets(currActivePlayer.getName(), targetMsg.toJSONString());
+	}
+	
+	public void handleVoidout(String voidedPlayerName) {
+		Player voidedPlayer = playerMap.get(voidedPlayerName);
+		if(currActivePlayer.getCoins() < 7) {
+			tableController.notifyTableOfUnauthorizedActivity("Received Voidout attempt without sufficient cash: " + voidedPlayerName);
+			return;
+		}
+		if(voidedPlayer != null && !voidedPlayer.equals(currActivePlayer) && !voidedPlayer.isLost()) {
+			String voidoutId = UUID.randomUUID().toString();
+			VoidoutInterrupt interrupt = new VoidoutInterrupt(voidoutId, currActivePlayer.getName(), voidedPlayerName, InterruptCase.VOIDOUT);
+			interruptibles.put(voidoutId, interrupt);
+			try {
+				int validRspIndices = getValidChallengeResponseIndices(voidedPlayer);
+				JSONObject returnObj = buildVoidoutRsp(voidedPlayerName, voidoutId, currActivePlayer.getName()+" is voiding out an ally of " + voidedPlayerName, validRspIndices);
+				tableController.notifyTableOfVoidout(returnObj.toJSONString());	
+			} catch (GameException e) {
+				tableController.notifyTableOfUnauthorizedActivity("Challenged player should have already lost: " + voidedPlayerName);
+				System.err.println("Challenged player should have already lost: " + voidedPlayerName);
+				return;
+			}
+		} else {
+			tableController.notifyTableOfUnauthorizedActivity("Incorrect voidout target: " + voidedPlayerName);
+		}
+	}
+	
+	public void handleVoidoutResponse(String interruptId, int cardIndexRsp) {
+		VoidoutInterrupt voidoutInterrupt = null;
+		synchronized(interruptibles) {
+			if(interruptibles.containsKey(interruptId)) {
+				voidoutInterrupt = (VoidoutInterrupt) interruptibles.get(interruptId);
+				interruptibles.remove(interruptId);
+			}
+		}
+		
+		if(voidoutInterrupt != null) {
+			voidoutInterrupt.setActive(false);
+			String voided = voidoutInterrupt.getVoidedPlayer();
+			String voider = voidoutInterrupt.getTriggerPlayer();
+			Player voidedPlayer = playerMap.get(voided);
+			Player voiderPlayer = playerMap.get(voider); 
+			
+			if(cardIndexRsp == 0 || cardIndexRsp == 1) {
+				if(voidedPlayer.getCardInHand(cardIndexRsp).isEliminated()) {
+					tableController.notifyTableOfUnauthorizedActivity("Player attempted to eliminate an already eliminated card: "+voided+"| "+cardIndexRsp);
+					return;
+				}
+				Card voidedCard = voidedPlayer.eliminateCardInHand(cardIndexRsp);
+				Player winnerCandidate = checkForWinner(voidedPlayer);
+				if(!DUMMY_PLAYER.equals(winnerCandidate)) {
+					sendUpdatedBoardToPlayers();
+					return;
+				}
+				voiderPlayer.addCoins(-7);
+				if(voiderPlayer.getCoins() < 10) {
+					voiderPlayer.setVoidLocked(false);
+				}
+				tableController.notifyTableWithSimpleMessage(voider+" dubbed "+voided+"'s "+voidedCard.getRole().name()+" to be persona-non-grata.");
+				advanceActivePlayer();
+				sendUpdatedBoardToPlayers();
+			} else {
+				tableController.notifyTableOfUnauthorizedActivity("Invalid card index (not 0 or 1) from "+voidedPlayer+": "+cardIndexRsp);
 			}
 		}
 	}
@@ -500,7 +583,16 @@ public class Tabletop {
 		return returnObj;
 	}
 	
-	private int getValidChallengeResponseIndices(Player playerToReveal) throws Exception {
+	private JSONObject buildVoidoutRsp(String voidedOutPlayer, String interruptId, String msg, int validIndices) {
+		JSONObject returnObj = new JSONObject();
+		returnObj.put("voided", voidedOutPlayer);
+		returnObj.put("interruptId", interruptId);
+		returnObj.put("msg", msg);
+		returnObj.put("valid", validIndices);
+		return returnObj;
+	}
+	
+	private int getValidChallengeResponseIndices(Player playerToReveal) throws GameException {
 		Card card0 = playerToReveal.getCardInHand(0);
 		Card card1 = playerToReveal.getCardInHand(1);
 		if(!card0.isFaceUp() && !card1.isFaceUp()) {

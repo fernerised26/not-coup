@@ -19,6 +19,7 @@ public class TableController {
 	private static final Map<String, Object> CHALLENGE_LOSS = new HashMap<>();
 	private static final Map<String, Object> ROUND_END = new HashMap<>();
 	private static final Map<String, Object> SIMPLE_MSG = new HashMap<>();
+	private static final Map<String, Object> VOIDOUT = new HashMap<>();
 //	private static final Map<String, Object> ACTIVE_PLAYER_UPDATE = new HashMap<>();
 //	private static final Map<String, Object> PLAYER_ORDER = new HashMap<>();
 	static {
@@ -31,6 +32,7 @@ public class TableController {
 		CHALLENGE_LOSS.put("case", "challengeloss");
 		ROUND_END.put("case", "roundend");
 		SIMPLE_MSG.put("case", "simpmsg");
+		VOIDOUT.put("case", "void");
 //		ACTIVE_PLAYER_UPDATE.put("case", "activeplayer");
 //		PLAYER_ORDER.put("case", "playerorder");
 	}
@@ -72,6 +74,10 @@ public class TableController {
 	
 	public void notifyTableWithSimpleMessage(String message) {
 		this.msgTemplate.convertAndSend("/topic/lobbyevents", message, SIMPLE_MSG);
+	}
+	
+	public void notifyTableOfVoidout(String message) {
+		this.msgTemplate.convertAndSend("/topic/lobbyevents", message, VOIDOUT);
 	}
 	
 //	public void notifyTableOfCurrentActivePlayer(String message) {

@@ -38,7 +38,7 @@ public abstract class Interrupt {
 		this.triggerPlayer = triggerPlayer;
 	}
 	
-	//For challenge interrupts (must wait indefinitely for game to proceed)
+	//For interrupts that must wait indefinitely for game to proceed
 	public Interrupt(String interruptId, String triggerPlayer, InterruptCase interruptCase) {
 		super();
 		this.interruptId = interruptId;
