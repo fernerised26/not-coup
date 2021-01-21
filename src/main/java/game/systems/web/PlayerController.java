@@ -12,9 +12,13 @@ public class PlayerController {
 	
 	private static final Map<String, Object> UPDATE_HEADER = new HashMap<>();
 	private static final Map<String, Object> TARGETS_HEADER = new HashMap<>();
+	private static final Map<String, Object> ADVANCE_HEADER = new HashMap<>();
+	private static final Map<String, Object> SCRAMBLE_SELECT = new HashMap<>();
 	static {
 		UPDATE_HEADER.put("case", "update");
 		TARGETS_HEADER.put("case", "targets");
+		ADVANCE_HEADER.put("case", "advance");
+		SCRAMBLE_SELECT.put("case", "scrambleselect");
 	}
 
 	@Autowired
@@ -32,7 +36,15 @@ public class PlayerController {
 		this.msgTemplate.convertAndSend("/queue/"+playerName, text, UPDATE_HEADER);
 	}
 	
+	public void contactPlayerAdvanceTable(String playerName, String text) {
+		this.msgTemplate.convertAndSend("/queue/"+playerName, text, ADVANCE_HEADER);
+	}
+	
 	public void contactPlayerValidTargets(String playerName, String text) {
 		this.msgTemplate.convertAndSend("/queue/"+playerName, text, TARGETS_HEADER);
+	}
+	
+	public void contactPlayerScrambleSelect(String playerName, String text) {
+		this.msgTemplate.convertAndSend("/queue/"+playerName, text, SCRAMBLE_SELECT);
 	}
 }

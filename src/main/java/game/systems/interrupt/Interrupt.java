@@ -1,4 +1,4 @@
-package game.systems;
+package game.systems.interrupt;
 
 import java.time.Instant;
 import java.util.HashSet;
@@ -10,7 +10,13 @@ public abstract class Interrupt {
 	private final String interruptId;
 	private final Instant startTime;
 	private final long duration;
-	private final String triggerPlayer;
+	
+	/**
+	 * Focused player is tracked to prevent someone from responding to their own action
+	 * or someone other than a select player from responding.
+	 * Concrete implementations will have one of the 2 cases above applied. 
+	 */
+	private final String focused;
 	
 	private boolean active = true;
 	private Set<String> responderNames;
@@ -18,34 +24,34 @@ public abstract class Interrupt {
 	private Future defaultResolverFuture;
 	
 	//Used for interrupts that can be followed up by a challenge
-	public Interrupt(String interruptId, long duration, InterruptCase interruptCase, String triggerPlayer) {
+	public Interrupt(String interruptId, long duration, InterruptCase interruptCase, String focused) {
 		super();
 		this.interruptId = interruptId;
 		this.startTime = Instant.now();
 		this.responderNames = new HashSet<>();
 		this.duration = duration;
 		this.interruptCase = interruptCase;
-		this.triggerPlayer = triggerPlayer;
+		this.focused = focused;
 	}
 	
 	//For interrupts that can only be countered
-	public Interrupt(String interruptId, long duration, String triggerPlayer) {
+	public Interrupt(String interruptId, long duration, String focused) {
 		super();
 		this.interruptId = interruptId;
 		this.startTime = Instant.now();
 		this.responderNames = new HashSet<>();
 		this.duration = duration;
-		this.triggerPlayer = triggerPlayer;
+		this.focused = focused;
 	}
 	
 	//For interrupts that must wait indefinitely for game to proceed
-	public Interrupt(String interruptId, String triggerPlayer, InterruptCase interruptCase) {
+	public Interrupt(String interruptId, String focused, InterruptCase interruptCase) {
 		super();
 		this.interruptId = interruptId;
 		this.startTime = Instant.now();
 		this.responderNames = new HashSet<>();
 		this.duration = -1L;
-		this.triggerPlayer = triggerPlayer;
+		this.focused = focused;
 		this.interruptCase = interruptCase;
 	}
 
@@ -93,7 +99,7 @@ public abstract class Interrupt {
 		this.defaultResolverFuture = defaultResolverFuture;
 	}
 
-	public String getTriggerPlayer() {
-		return triggerPlayer;
+	public String getFocused() {
+		return focused;
 	}
 }

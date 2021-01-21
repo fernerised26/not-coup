@@ -20,6 +20,9 @@ public class TableController {
 	private static final Map<String, Object> ROUND_END = new HashMap<>();
 	private static final Map<String, Object> SIMPLE_MSG = new HashMap<>();
 	private static final Map<String, Object> VOIDOUT = new HashMap<>();
+	private static final Map<String, Object> HIT_ORDER = new HashMap<>();
+	private static final Map<String, Object> FORCED_HIT_ORDER = new HashMap<>();
+	private static final Map<String, Object> UTTER_DEFEAT = new HashMap<>();
 //	private static final Map<String, Object> ACTIVE_PLAYER_UPDATE = new HashMap<>();
 //	private static final Map<String, Object> PLAYER_ORDER = new HashMap<>();
 	static {
@@ -33,6 +36,9 @@ public class TableController {
 		ROUND_END.put("case", "roundend");
 		SIMPLE_MSG.put("case", "simpmsg");
 		VOIDOUT.put("case", "void");
+		HIT_ORDER.put("case", "hitorder");
+		FORCED_HIT_ORDER.put("case", "forcedhit");
+		UTTER_DEFEAT.put("case", "utterdefeat");
 //		ACTIVE_PLAYER_UPDATE.put("case", "activeplayer");
 //		PLAYER_ORDER.put("case", "playerorder");
 	}
@@ -78,6 +84,18 @@ public class TableController {
 	
 	public void notifyTableOfVoidout(String message) {
 		this.msgTemplate.convertAndSend("/topic/lobbyevents", message, VOIDOUT);
+	}
+	
+	public void notifyTableOfHitOrder(String message) {
+		this.msgTemplate.convertAndSend("/topic/lobbyevents", message, HIT_ORDER);
+	}
+	
+	public void notifyTableOfForcedHitOrder(String message) {
+		this.msgTemplate.convertAndSend("/topic/lobbyevents", message, FORCED_HIT_ORDER);
+	}
+	
+	public void notifyTableOfUtterDefeat(String message) {
+		this.msgTemplate.convertAndSend("/topic/lobbyevents", message, UTTER_DEFEAT);
 	}
 	
 //	public void notifyTableOfCurrentActivePlayer(String message) {

@@ -1,5 +1,7 @@
 package game.systems;
 
+import game.systems.interrupt.InterruptCase;
+
 public class InterruptDefaultResolver implements Runnable{
 
 	private final String interruptId;
@@ -28,8 +30,17 @@ public class InterruptDefaultResolver implements Runnable{
 			case CROWDFUND_COUNTER:
 				table.resolveCrowdfund(interruptId, false);
 				break;
+			case PRINT_MONEY:
+				table.resolvePrintMoney(interruptId);
+				break;
+			case ORDER_HIT_COUNTER:
+				table.resolveHitCounter(interruptId);
+				break;
+			case SCRAMBLE_IDENTITY:
+				table.resolveScrambleIdentity1(interruptId);
+				break;
 			default:
-				System.err.println("Invalid case, no valid default behavior: "+defaultableAction);
+				System.err.println("Invalid case, no valid default behavior: " + defaultableAction);
 		}
 	}
 }
