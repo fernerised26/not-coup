@@ -81,18 +81,25 @@ skipNonTimedButton.setAttribute("id","skipspecial");
 skipNonTimedButton.setAttribute("class","btn cntr-btn");
 skipNonTimedButton.setAttribute("title","Declare no challenges or counters");
 skipNonTimedButton.setAttribute("type","submit");
-var challengeWhenTargetedButton = document.createElement("button");
-challengeWhenTargetedButton.innerHTML = "Challenge";
-challengeWhenTargetedButton.setAttribute("id","challengespecial");
-challengeWhenTargetedButton.setAttribute("class","btn cntr-btn");
-challengeWhenTargetedButton.setAttribute("title","Challenge the last action performed");
-challengeWhenTargetedButton.setAttribute("type","submit");
+var challengeWhenHitTargetedButton = document.createElement("button");
+challengeWhenHitTargetedButton.innerHTML = "Challenge";
+challengeWhenHitTargetedButton.setAttribute("id","challengespecial");
+challengeWhenHitTargetedButton.setAttribute("class","btn cntr-btn");
+challengeWhenHitTargetedButton.setAttribute("title","Challenge the last action performed");
+challengeWhenHitTargetedButton.setAttribute("type","submit");
 var acceptDefeatButton = document.createElement("button");
 acceptDefeatButton.innerHTML = "Accept Defeat";
 acceptDefeatButton.setAttribute("id","acceptdefeat");
 acceptDefeatButton.setAttribute("class","btn cntr-btn");
 acceptDefeatButton.setAttribute("title","Accept utter defeat");
 acceptDefeatButton.setAttribute("type","submit");
+var submitScrambleButton = document.createElement("button");
+submitScrambleButton.innerHTML = "Submit";
+submitScrambleButton.setAttribute("id","submitscramble");
+submitScrambleButton.setAttribute("class","btn cntr-btn");
+submitScrambleButton.setAttribute("title","Lock-in the card(s) to keep");
+submitScrambleButton.setAttribute("type","submit");
+submitScrambleButton.disabled = true;
 
 var progressBarParent = document.createElement("div");
 progressBarParent.className = "progress";
@@ -208,13 +215,8 @@ function reactLobbyEvent(message) {
 				progressBarChild.innerText = (rspWindowMs / 1000) + "secs";
 				
 				if(myName !== playerToCounter){
-					console.log("parsing group counter")
-					console.log(groupCounterMsg);
 					latestInterruptId = groupCounterMsg.interruptId;
 					let actionToCounter = groupCounterMsg.interruptFor;
-					
-					console.log(latestInterruptId);
-					console.log(actionToCounter);
 					let bottomRight = document.getElementById("cell-5-3");
 					center.innerHTML = groupCounterMsg.msg;
 					switch(actionToCounter){
@@ -223,7 +225,7 @@ function reactLobbyEvent(message) {
 							bottomRight.appendChild(skipButton);
 							break;
 						default:
-							console.log("Unknown action to counter: "+actionToCounter); 
+							console.error("Unknown action to counter: "+actionToCounter); 
 					}
 				} else {
 					center.innerHTML = "Waiting for other players...";
@@ -240,13 +242,13 @@ function reactLobbyEvent(message) {
 				let groupCounterMsg = JSON.parse(message.body);
 				let playerToChallenge = groupCounterMsg.atRisk;
 				let rspWindowMs = groupCounterMsg.rspWindowMs;
+				latestInterruptId = groupCounterMsg.interruptId;
 				
 				progressBarChild.setAttribute("aria-valuenow", "100");
 				progressBarChild.style.width = "100%";
 				progressBarChild.innerText = (rspWindowMs / 1000) + "secs";
 				
 				if(myName !== playerToChallenge){
-					latestInterruptId = groupCounterMsg.interruptId;
 					let actionToChallenge = groupCounterMsg.interruptFor;
 					let bottomRight = document.getElementById("cell-5-3");
 					center.innerHTML = groupCounterMsg.msg;
@@ -254,11 +256,14 @@ function reactLobbyEvent(message) {
 						case "crowdfundCounter":
 						case "printMoney":
 						case "decoy":
+						case "scrambleIdentity":
+						case "sabotage":
+						case "fortify":
 							bottomRight.appendChild(challengeButton);
 							bottomRight.appendChild(skipButton);
 							break;
 						default:
-							console.log("Unknown action to counter: "+actionToChallenge); 
+							console.error("Unknown action to counter: "+actionToChallenge); 
 					}
 				} else {
 					center.innerHTML = "Waiting for other players...";
@@ -278,7 +283,7 @@ function reactLobbyEvent(message) {
 				
 				if(myName === challenged){
 					latestInterruptId = challengeMsg.interruptId;
-					center.innerHTML = "You have been challenged to show a " + neededAlly + ". Select a card in your hand to reveal."
+					center.innerHTML = "You have been challenged to show a " + neededAlly + ". Select a card in your hand to reveal.";
 					let myPlayerSpot = document.getElementById("self-player");
 					let card1Div = myPlayerSpot.getElementsByClassName("card-1")[0];
 					let card2Div = myPlayerSpot.getElementsByClassName("card-2")[0];
@@ -298,7 +303,7 @@ function reactLobbyEvent(message) {
 				
 				if(myName === challenger){
 					latestInterruptId = challengeMsg.interruptId;
-					center.innerHTML = "You lost your challenge. Select a card in your hand to lose."
+					center.innerHTML = "You lost your challenge. Select a card in your hand to lose.";
 					let myPlayerSpot = document.getElementById("self-player");
 					let card1Div = myPlayerSpot.getElementsByClassName("card-1")[0];
 					let card2Div = myPlayerSpot.getElementsByClassName("card-2")[0];
@@ -318,7 +323,7 @@ function reactLobbyEvent(message) {
 				
 				if(myName === voidedPlayer){
 					latestInterruptId = voidMsg.interruptId;
-					center.innerHTML = "One of your associates has been voided. Select a card in your hand to lose."
+					center.innerHTML = "One of your associates has been voided. Select a card in your hand to lose.";
 					let myPlayerSpot = document.getElementById("self-player");
 					let card1Div = myPlayerSpot.getElementsByClassName("card-1")[0];
 					let card2Div = myPlayerSpot.getElementsByClassName("card-2")[0];
@@ -352,18 +357,20 @@ function reactLobbyEvent(message) {
 				
 				if(myName === targetPlayer){
 					latestInterruptId = hitOrderMsg.interruptId;
-					center.innerHTML = "A hitman has come to collect a bounty on one of your associates. Select a card in your hand to lose or a counter response."
+					center.innerHTML = "A hitman has come to collect a bounty on one of your associates. Select a card in your hand to lose or a counter response.";
 					let myPlayerSpot = document.getElementById("self-player");
 					let card1Div = myPlayerSpot.getElementsByClassName("card-1")[0];
 					let card2Div = myPlayerSpot.getElementsByClassName("card-2")[0];
 					enableValidClickableCardsHitOrder(card1Div, card2Div, validIndices);
-					bottomRight.appendChild(challengeWhenTargetedButton);
+					bottomRight.appendChild(challengeWhenHitTargetedButton);
 					bottomRight.appendChild(counterHitButton);
 				} else if(myName === ordererPlayer) {
 					center.innerHTML = "Waiting for other players..."
 				} else {
+					latestInterruptId = hitOrderMsg.interruptId;
 					center.innerHTML = hitOrderMsg.msg;
 					bottomRight.appendChild(skipNonTimedButton);
+					bottomRight.appendChild(challengeButton);
 				}
 			}
 			break;
@@ -377,7 +384,7 @@ function reactLobbyEvent(message) {
 				if(myName === defeated){
 					latestInterruptId = utterDefeatMsg.interruptId;
 					let bottomRight = document.getElementById("cell-5-3");
-					center.innerHTML = "The hitman was the real deal, you must now accept defeat."
+					center.innerHTML = "The hitman was the real deal, you must now accept defeat.";
 					bottomRight.appendChild(acceptDefeatButton);
 				} else {
 					center.innerHTML = utterDefeatMsg.msg;
@@ -394,7 +401,7 @@ function reactLobbyEvent(message) {
 				
 				if(myName === targetPlayer){
 					latestInterruptId = forcedHitOrderMsg.interruptId;
-					center.innerHTML = "The hitman was the real deal. Select a card in your hand to lose or a counter response."
+					center.innerHTML = "The hitman was the real deal. Select a card in your hand to lose or a counter response.";
 					let myPlayerSpot = document.getElementById("self-player");
 					let card1Div = myPlayerSpot.getElementsByClassName("card-1")[0];
 					let card2Div = myPlayerSpot.getElementsByClassName("card-2")[0];
@@ -404,9 +411,43 @@ function reactLobbyEvent(message) {
 				}
 			}
 			break;
+		case "raid": {
+				cleanupInterrupt();
+				let center = document.getElementById("cell-2-3");
+				let topCenter = document.getElementById("cell-2-2");
+				
+				let raidMsg = JSON.parse(message.body);
+				let targetPlayer = raidMsg.target;
+				let raiderPlayer = raidMsg.raider;
+				let bottomRight = document.getElementById("cell-5-3");
+				let rspWindowMs = raidMsg.rspWindowMs;
+				latestInterruptId = raidMsg.interruptId;
+				
+				progressBarChild.setAttribute("aria-valuenow", "100");
+				progressBarChild.style.width = "100%";
+				progressBarChild.innerText = (rspWindowMs / 1000) + "secs";
+				
+				if(myName === targetPlayer){
+					center.innerHTML = "Your booty is about to be plundered, select a response.";
+					bottomRight.appendChild(challengeButton);
+					bottomRight.appendChild(counterAsNetOpsButton); 
+					bottomRight.appendChild(counterAsCaptainButton);
+					bottomRight.appendChild(skipButton);
+				} else if(myName === raiderPlayer) {
+					center.innerHTML = "Waiting for other players...";
+				} else {
+					center.innerHTML = raidMsg.msg;
+					bottomRight.appendChild(challengeButton);
+					bottomRight.appendChild(skipButton); 
+				}
+				
+				topCenter.appendChild(progressBarParent);
+				updateProgressBar(100, 0, rspWindowMs, raidMsg.interruptId);
+			}
+			break;
 		default:
-			console.log("Unknown lobby header");
-			console.log(message);
+			console.error("Unknown lobby header");
+			console.error(message);
 	}
 }
 
@@ -420,7 +461,7 @@ function updateProgressBar(updateIntervalMs, elapsedMs, maxMs, interruptId){
 		setTimeout(function(){
 			updateProgressBar(updateIntervalMs, newElapsed, maxMs, interruptId);
 		}, updateIntervalMs);	
-	} else {
+	} else if(latestInterruptId === ""){
 		cleanupInterrupt();
 	}
 }
@@ -445,9 +486,11 @@ function reactPersonalEvent(message){
 			}
 			break;
 		case "advance": {
+				latestInterruptId = "";
 				let tableState = JSON.parse(message.body);
 				updateGamePieces(tableState.boardState);
 				handleActivePlayer(tableState.activePlayer, tableState.boardState);
+				cleanupInterrupt();
 			}
 			break;
 		case "targets": {
@@ -459,7 +502,7 @@ function reactPersonalEvent(message){
 						let selectableName = nameList[nameIndex];
 						let selectablePlayerDiv = document.getElementById(divNamesByPlayerNames[selectableName]);
 						let playerClickFunc = orderHitFuncFactory(selectableName);
-						selectablePlayerDiv.addEventListener("click", playerClickFunc);
+						selectablePlayerDiv.addEventListener("click", playerClickFunc, false);
 						selectablePlayerDiv.classList.add("hoverable-player");
 						playerDivClickFuncs.push({"pName":selectableName, "clickFunc":playerClickFunc});
 					}
@@ -468,7 +511,16 @@ function reactPersonalEvent(message){
 						let selectableName = nameList[nameIndex];
 						let selectablePlayerDiv = document.getElementById(divNamesByPlayerNames[selectableName]);
 						let playerClickFunc = voidOutFuncFactory(selectableName);
-						selectablePlayerDiv.addEventListener("click", playerClickFunc);
+						selectablePlayerDiv.addEventListener("click", playerClickFunc, false);
+						selectablePlayerDiv.classList.add("hoverable-player");
+						playerDivClickFuncs.push({"pName":selectableName, "clickFunc":playerClickFunc});
+					}
+				} else if(action === "raid"){
+					for(let nameIndex = 0; nameIndex < nameList.length; nameIndex++){
+						let selectableName = nameList[nameIndex];
+						let selectablePlayerDiv = document.getElementById(divNamesByPlayerNames[selectableName]);
+						let playerClickFunc = raidFuncFactory(selectableName);
+						selectablePlayerDiv.addEventListener("click", playerClickFunc, false);
 						selectablePlayerDiv.classList.add("hoverable-player");
 						playerDivClickFuncs.push({"pName":selectableName, "clickFunc":playerClickFunc});
 					}
@@ -480,15 +532,62 @@ function reactPersonalEvent(message){
 				bottomRight.appendChild(cancelPlayerSelectButton);
 			}
 			break;
+		case "scrambleselect": {
+				let scrambleMsg = JSON.parse(message.body);
+				let tempCardPool = scrambleMsg.tempCardPool;
+				let bottomCenter = document.getElementById("cell-4-2");
+				let center = document.getElementById("cell-2-3");
+				let bottomRight = document.getElementById("cell-5-3");
+				latestInterruptId = scrambleMsg.interruptId;
+				
+				for(let poolIndex = 0; poolIndex < tempCardPool.length; poolIndex++) {
+					let scrambleCardImgData = getCardImageData(tempCardPool[poolIndex]);
+					let scrambleCardImg = getCardDomImgObj(scrambleCardImgData);
+					scrambleCardImg.classList.add("checkbox-card");
+					let checkboxId = "cb"+poolIndex;
+					let checkbox = document.createElement("input");
+					checkbox.setAttribute("name", "scrambleselect");
+					checkbox.setAttribute("value", poolIndex);
+					checkbox.setAttribute("type", "checkbox");
+					checkbox.setAttribute("id", checkboxId);
+					checkbox.className = "scramble-checkbox";
+					
+					let cbLabelId = "cbl"+poolIndex;
+					let cbLabel = document.createElement("label");
+					let maxCount = 1;
+					if(tempCardPool.length === 3) {
+						cbLabel.className = "col-md-4 scramble-card";
+						maxCount = 1;
+					} else if(tempCardPool.length === 4) {
+						cbLabel.className = "col-md-3 scramble-card";
+						maxCount = 2;
+					} else {
+						$("#log-window").html("Invalid scramble data, incorrect number of cards: "+tempCardPool.length);
+						console.error("Invalid scramble data, incorrect number of cards: "+tempCardPool.length);
+						return;
+					}
+					cbLabel.setAttribute("for", checkboxId);
+					cbLabel.appendChild(scrambleCardImg);
+					cbLabel.setAttribute("id", cbLabelId);
+					let clickFunc = handleClickScrambleFactory(checkboxId, cbLabelId, maxCount);
+					checkbox.addEventListener("change", clickFunc);
+					bottomCenter.appendChild(checkbox);
+					bottomCenter.appendChild(cbLabel);
+					
+					center.innerHTML = scrambleMsg.msg;
+					bottomRight.appendChild(submitScrambleButton);
+				}
+			}
+			break;
 		default:
-			console.log("Unknown case");
-			console.log(message);
+			console.error("Unknown case");
+			console.error(message);
 	}
 }
 
 function updateGamePieces(boardState){
 	if(activeDivNames === null){
-		console.log("Unable to update, activeDivNames not initialized");
+		console.error("Unable to update, activeDivNames not initialized");
 		return;
 	} else {
 		let playerNamesFromKeys = Object.keys(boardState);
@@ -570,7 +669,7 @@ function initPlayers(tableStarter, masterPlayerOrder){
 			activeDivNames = sixPlayerDivNames;
 			break;
 		default:
-			console.log("Invalid player count:"+masterPlayerOrder.length);
+			console.error("Invalid player count:"+masterPlayerOrder.length);
 	}
 	
 	playerOrder.push(myName);
@@ -601,7 +700,7 @@ function updatePlayerPieces(playerDivChildren, playerObj){
 	let card1ImgData = getCardImageData(playerObj.cardsOwned[0]);
 	let card2ImgData = getCardImageData(playerObj.cardsOwned[1]);
 	if(card1ImgData === null || card2ImgData === null){
-		console.log("Error updating player state");
+		console.error("Error updating player state");
 		return;
 	}
 	let currCard1 = playerDivChildren[1].firstElementChild;
@@ -652,7 +751,7 @@ function getCardImageData(cardName){
 		case "FACEDOWN":
 			return [unrevealedImgSrc, unrevealedHoverText, cardName];
 		default:
-			console.log("Invalid Card Name:"+cardName);
+			console.error("Invalid Card Name:"+cardName);
 	}
 }
 
@@ -685,12 +784,9 @@ function scramble() {
 	stompClient.send("/app/scramble", {"secret":mySecret, "pname":myName}, myName);
 }
 
-function orderHit() {
-//	stompClient.send("/app/orderhit", {}, mySecret);
-}
-
-function raid() {
-//	stompClient.send("/app/raid", {}, mySecret);
+function selectRaidTarget() {
+	disableActionButtons();
+	stompClient.send("/app/raidtargets", {"secret":mySecret, "pname":myName}, myName);
 }
 
 function selectVoidOutTarget() {
@@ -698,18 +794,19 @@ function selectVoidOutTarget() {
 	stompClient.send("/app/voidtargets", {"secret":mySecret, "pname":myName}, myName);
 }
 
-function selectHitTargets() {
+function selectHitTarget() {
 	disableActionButtons();
 	stompClient.send("/app/hittargets", {"secret":mySecret, "pname":myName}, myName);
 }
 
 function voidOutFuncFactory(playerName){
 	return function () {
-		for(let clickFuncIndex = (playerDivClickFuncs.length - 1); clickFuncIndex >= 0; clickFuncIndex--){
-			let wrapper = playerDivClickFuncs[clickFuncIndex];
-			let clickablePlayerDiv = document.getElementById(divNamesByPlayerNames[wrapper.pName]);
-			clickablePlayerDiv.removeEventListener("click", [wrapper.clickFunc]);
+		let currClickWrapper = playerDivClickFuncs.pop();
+		while(currClickWrapper !== undefined){
+			let clickablePlayerDiv = document.getElementById(divNamesByPlayerNames[currClickWrapper.pName]);
+			clickablePlayerDiv.removeEventListener("click", currClickWrapper.clickFunc, false);
 			clickablePlayerDiv.classList.remove("hoverable-player");
+			currClickWrapper = playerDivClickFuncs.pop();
 		}
 		stompClient.send("/app/voidout", 
 			{"secret":mySecret, "pname":myName}, 
@@ -719,13 +816,29 @@ function voidOutFuncFactory(playerName){
 
 function orderHitFuncFactory(playerName){
 	return function () {
-		for(let clickFuncIndex = (playerDivClickFuncs.length - 1); clickFuncIndex >= 0; clickFuncIndex--){
-			let wrapper = playerDivClickFuncs[clickFuncIndex];
-			let clickablePlayerDiv = document.getElementById(divNamesByPlayerNames[wrapper.pName]);
-			clickablePlayerDiv.removeEventListener("click", [wrapper.clickFunc]);
+		let currClickWrapper = playerDivClickFuncs.pop();
+		while(currClickWrapper !== undefined){
+			let clickablePlayerDiv = document.getElementById(divNamesByPlayerNames[currClickWrapper.pName]);
+			clickablePlayerDiv.removeEventListener("click", currClickWrapper.clickFunc, false);
 			clickablePlayerDiv.classList.remove("hoverable-player");
+			currClickWrapper = playerDivClickFuncs.pop();
 		}
 		stompClient.send("/app/orderhit", 
+			{"secret":mySecret, "pname":myName}, 
+			JSON.stringify({"target":playerName}));
+	}
+}
+
+function raidFuncFactory(playerName){
+	return function () {
+		let currClickWrapper = playerDivClickFuncs.pop();
+		while(currClickWrapper !== undefined){
+			let clickablePlayerDiv = document.getElementById(divNamesByPlayerNames[currClickWrapper.pName]);
+			clickablePlayerDiv.removeEventListener("click", currClickWrapper.clickFunc, false);
+			clickablePlayerDiv.classList.remove("hoverable-player");
+			currClickWrapper = playerDivClickFuncs.pop();
+		}
+		stompClient.send("/app/raid", 
 			{"secret":mySecret, "pname":myName}, 
 			JSON.stringify({"target":playerName}));
 	}
@@ -757,13 +870,17 @@ function counterCrowdfund(){
 
 function counterStealAsNetOps(){
 	cleanupInterrupt();
-	
+	stompClient.send("/app/raidcounternops", 
+		{"secret":mySecret, "pname":myName}, 
+		JSON.stringify({"interruptId":latestInterruptId}));
 	latestInterruptId = null;
 }
 
 function counterStealAsCaptain(){
 	cleanupInterrupt();
-	
+	stompClient.send("/app/raidcountercpt", 
+		{"secret":mySecret, "pname":myName}, 
+		JSON.stringify({"interruptId":latestInterruptId}));
 	latestInterruptId = null;
 }
 
@@ -784,12 +901,14 @@ function skip(){
 }
 
 function cancelTargeting(){
-	for(let clickFuncIndex = (playerDivClickFuncs.length - 1); clickFuncIndex >= 0; clickFuncIndex--){
-		let wrapper = playerDivClickFuncs[clickFuncIndex];
-		let clickablePlayerDiv = document.getElementById(divNamesByPlayerNames[wrapper.pName]);
-		clickablePlayerDiv.removeEventListener("click", [wrapper.clickFunc]);
+	let currClickWrapper = playerDivClickFuncs.pop();
+	while(currClickWrapper !== undefined){
+		let clickablePlayerDiv = document.getElementById(divNamesByPlayerNames[currClickWrapper.pName]);
+		clickablePlayerDiv.removeEventListener("click", currClickWrapper.clickFunc, false);
 		clickablePlayerDiv.classList.remove("hoverable-player");
+		currClickWrapper = playerDivClickFuncs.pop();
 	}
+		
 	reenableActionButtons();
 	let bottomRight = document.getElementById("cell-5-3");
 	while (bottomRight.firstChild) {
@@ -899,6 +1018,25 @@ function respondForcedHitCard2(){
 		JSON.stringify({"interruptId":latestInterruptId, "cardIndex":1}));
 }
 
+function submitScramble(){
+	cleanupInterrupt();
+	
+	let checkboxes = document.getElementsByClassName("scramble-checkbox");
+	let chosen = [];
+	for(let cbIndex = 0; cbIndex < checkboxes.length; cbIndex++) {
+		if(checkboxes[cbIndex].checked){
+			chosen.push(parseInt(checkboxes[cbIndex].value));
+		}
+	}
+		
+	let bottomCenter = document.getElementById("cell-4-2");
+	while (bottomCenter.firstChild) {
+ 	   bottomCenter.removeChild(bottomCenter.firstChild);
+	}
+	stompClient.send("/app/scrambleselect", {"secret":mySecret, "pname":myName}, 
+		JSON.stringify({"interruptId":latestInterruptId, "chosen":chosen}));
+}
+
 function enableValidClickableCardsChallenge1(card1Div, card2Div, validIndices){
 	switch(validIndices) {
 		case 2: 
@@ -916,7 +1054,7 @@ function enableValidClickableCardsChallenge1(card1Div, card2Div, validIndices){
 			card1Div.addEventListener("click", respondChallenge1Card1);
 			break;
 		default:
-			console.log("Unknown validity code for challenge response:"+validIndices);
+			console.error("Unknown validity code for challenge response:"+validIndices);
 	}
 }
 
@@ -937,7 +1075,7 @@ function enableValidClickableCardsChallenge2(card1Div, card2Div, validIndices){
 			card1Div.addEventListener("click", respondChallenge2Card1);
 			break;
 		default:
-			console.log("Unknown validity code for challenge response:"+validIndices);
+			console.error("Unknown validity code for challenge response:"+validIndices);
 	}
 }
 
@@ -958,7 +1096,7 @@ function enableValidClickableCardsVoidout(card1Div, card2Div, validIndices){
 			card1Div.addEventListener("click", respondVoidCard1);
 			break;
 		default:
-			console.log("Unknown validity code for voidout response:"+validIndices);
+			console.error("Unknown validity code for voidout response:"+validIndices);
 	}
 }
 
@@ -979,7 +1117,7 @@ function enableValidClickableCardsHitOrder(card1Div, card2Div, validIndices){
 			card1Div.addEventListener("click", respondHitCard1);
 			break;
 		default:
-			console.log("Unknown validity code for hit order response:"+validIndices);
+			console.error("Unknown validity code for hit order response:"+validIndices);
 	}
 }
 
@@ -1000,7 +1138,7 @@ function enableValidClickableCardsForcedHitOrder(card1Div, card2Div, validIndice
 			card1Div.addEventListener("click", respondForcedHitCard1);
 			break;
 		default:
-			console.log("Unknown validity code for forced hit response:"+validIndices);
+			console.error("Unknown validity code for forced hit response:"+validIndices);
 	}
 }
 
@@ -1019,55 +1157,40 @@ function cleanupHoverableCardClass(){
 	return [card1Div, card2Div];
 }
 
-function testButton() {	
-//	let div1 = document.getElementById("4p1");
-//	let div2 = document.getElementById("4p2");
-//	let div3 = document.getElementById("4p3");
-//	
-//	div1.classList.add("hoverable-player");
-//	let playerClickFunc1 = function(){
-//		console.log("dummy button1: ");
-//	}
-//	div1.addEventListener("click", playerClickFunc1);
-//	playerDivClickFuncs.push({"pName":"4p1", "clickFunc":playerClickFunc1});
-//	
-//	div2.classList.add("hoverable-player");
-//	let playerClickFunc2 = function(){
-//		console.log("dummy button2: ");
-//	}
-//	div2.addEventListener("click", playerClickFunc2);
-//	playerDivClickFuncs.push({"pName":"4p2", "clickFunc":playerClickFunc2});
-//	
-//	div3.classList.add("hoverable-player");
-//	let playerClickFunc3 = function(){
-//		console.log("dummy button3: ");
-//	}
-//	div3.addEventListener("click", playerClickFunc3);
-//	playerDivClickFuncs.push({"pName":"4p3", "clickFunc":playerClickFunc3});
-//	let count = parseInt(document.getElementById("self-player").innerText);
-//	console.log("count: "+count);
-//	console.log("count comparison === 100 "+(count === 100));
-//	console.log("count comparison > 50 "+(count > 50));
-//	console.log(count + 50);
-//	console.log("test1");
+function handleClickScrambleFactory(linkedId, labelId, maxCount) {
+	return function (){
+		let checkboxes = document.getElementsByClassName("scramble-checkbox");
+		let checkCount = 0;
+		for(let cbIndex = 0; cbIndex < checkboxes.length; cbIndex++) {
+			if(checkboxes[cbIndex].checked){
+				checkCount++;
+			}
+		}
+		let thisCheckbox = document.getElementById(linkedId);
+		let thisLabel = document.getElementById(labelId);
+		if(thisCheckbox.checked === true) {
+			if(checkCount > maxCount){
+				thisCheckbox.checked = false;
+				thisLabel.classList.remove("selected-scramble-card");
+				submitScrambleButton.disabled = false;
+				return false;
+			} else if(checkCount === maxCount){
+				thisLabel.classList.add("selected-scramble-card");
+				submitScrambleButton.disabled = false;
+				return true;
+			} else {
+				thisCheckbox.checked = true;
+				thisLabel.classList.add("selected-scramble-card");
+				submitScrambleButton.disabled = true;
+				return true;
+			}
+		} else {
+			thisLabel.classList.remove("selected-scramble-card");
+			submitScrambleButton.disabled = true;
+		}
+	}
 }
 
-function testButton2() {
-//	let topCenter = document.getElementById("cell-2-2");
-//	topCenter.innerHTML = "";
-//	progressBarChild.setAttribute("aria-valuenow", "100");
-//	progressBarChild.style.width = "100%";
-//	topCenter.appendChild(progressBarParent);
-//	let actBtnVoid = document.getElementById("void");
-//	actBtnVoid.disabled = !actBtnVoid.disabled
-//	for(let clickFuncIndex = (playerDivClickFuncs.length - 1); clickFuncIndex >= 0; clickFuncIndex--){
-//		let wrapper = playerDivClickFuncs[clickFuncIndex];
-//		let playerDiv = document.getElementById(wrapper.pName);
-//		playerDiv.removeEventListener("click", wrapper.clickFunc);
-//		playerDiv.classList.remove("hoverable-player");
-//	}
-//	console.log("test2");
-}
 
 function handleActivePlayer(activePlayerName, boardState) {
 	let actBtns = document.getElementsByClassName("act-btn");
@@ -1177,8 +1300,8 @@ $(function () {
 	$("#crowdfund").click(function() { crowdfund(); });
 	$("#printmoney").click(function() { printMoney(); });
 	$("#scramble").click(function() { scramble(); });
-	$("#orderhit").click(function() { selectHitTargets(); });
-	$("#raid").click(function() { raid(); });
+	$("#orderhit").click(function() { selectHitTarget(); });
+	$("#raid").click(function() { selectRaidTarget(); });
 	$("#void").click(function() { selectVoidOutTarget(); });
 	counterCrowdfundButton.addEventListener("click", counterCrowdfund);
 	challengeButton.addEventListener("click", challenge);
@@ -1186,13 +1309,16 @@ $(function () {
 	skipNonTimedButton.addEventListener("click", cleanupInterrupt);
 	skipNonTimedButton.addEventListener("click", cleanupHitResponses);
 	cancelPlayerSelectButton.addEventListener("click", cancelTargeting);
-	challengeWhenTargetedButton.addEventListener("click", challenge);
-	challengeWhenTargetedButton.addEventListener("click", cleanupHitResponses);
+	challengeWhenHitTargetedButton.addEventListener("click", challenge);
+	challengeWhenHitTargetedButton.addEventListener("click", cleanupHitResponses);
 	acceptDefeatButton.addEventListener("click", acceptDefeat);
 	counterHitButton.addEventListener("click", counterHit);
 	counterHitButton.addEventListener("click", cleanupHitResponses);
-	$("#testbutton").click(function() { testButton(); });
-	$("#testbutton").click(function() { testButton2(); });
+	submitScrambleButton.addEventListener("click", submitScramble);
+	counterAsNetOpsButton.addEventListener("click", counterStealAsNetOps);
+	counterAsCaptainButton.addEventListener("click", counterStealAsCaptain);
+	$("#testbutton").click(function() { testButton(); }); 
+	$("#testbutton2").click(function() { testButton2(); });
 });
 
 //function initiateRoundReset(){

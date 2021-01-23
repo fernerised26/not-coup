@@ -39,6 +39,12 @@ public class InterruptDefaultResolver implements Runnable{
 			case SCRAMBLE_IDENTITY:
 				table.resolveScrambleIdentity1(interruptId);
 				break;
+			case RAID:
+				table.resolveRaid(interruptId);
+				break;
+			case RAID_COUNTER:
+				table.resolveRaidCounter(interruptId);
+				break;
 			default:
 				System.err.println("Invalid case, no valid default behavior: " + defaultableAction);
 		}

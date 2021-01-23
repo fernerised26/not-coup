@@ -93,11 +93,6 @@ public class Player {
 		maskedHand.set(indexToReplace, Card.FACEDOWN);
 	}
 	
-	public void addCardsViaExchange(List<Card> replacementHand) {
-		cardsOwned = replacementHand;
-		updateJsonHandForExchange(replacementHand);
-	}
-	
 	public boolean isSecret(String presentedSecret) {
 		return secret.equals(presentedSecret);
 	}
@@ -115,9 +110,9 @@ public class Player {
 	}
 	
 	@SuppressWarnings("unchecked")
-	private void updateJsonHandForExchange(List<Card> replacementHand) {
-		for(int i=0; i<replacementHand.size(); i++) {
-			Card currReplacementCard = replacementHand.get(i);
+	public void updateJsonHandForExchange() {
+		for(int i=0; i<cardsOwned.size(); i++) {
+			Card currReplacementCard = cardsOwned.get(i);
 			jsonHand.set(i, currReplacementCard.toString());
 			if(currReplacementCard.isFaceUp()) {
 				maskedHand.set(i, currReplacementCard.toString());

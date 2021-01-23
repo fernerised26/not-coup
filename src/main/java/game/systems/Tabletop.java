@@ -3,6 +3,7 @@ package game.systems;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -22,6 +23,7 @@ import game.pieces.Card;
 import game.pieces.Deck;
 import game.pieces.Roles;
 import game.pieces.impl.DeckImpl;
+import game.systems.interrupt.BlockInterrupt;
 import game.systems.interrupt.ChallengeInterrupt;
 import game.systems.interrupt.CrowdfundCounterInterrupt;
 import game.systems.interrupt.CrowdfundInterrupt;
@@ -31,6 +33,7 @@ import game.systems.interrupt.HitInterrupt;
 import game.systems.interrupt.Interrupt;
 import game.systems.interrupt.InterruptCase;
 import game.systems.interrupt.PrintMoneyInterrupt;
+import game.systems.interrupt.RaidInterrupt;
 import game.systems.interrupt.ScrambleInterrupt;
 import game.systems.interrupt.VoidoutInterrupt;
 import game.systems.web.PlayerController;
@@ -104,17 +107,11 @@ public class Tabletop {
 			for(Entry<String, Player> playerEntry : playerMap.entrySet()) {
 				Player currPlayer = playerEntry.getValue();
 				
-//				System.out.println("dealing to "+currPlayer.name);
-				
 				List<Card> cardsDrawn = deck.draw(2);
-//				System.out.println("cards drawn: "+cardsDrawn);
 				currPlayer.addCardsInit(cardsDrawn);
 				currPlayer.addCoins(2);
-				
-//				System.out.println("finished dealing "+ currPlayer);
 			}
 			
-//			System.out.println(playerMap);
 			currActivePlayer = playerMap.get(orderedPlayerNames.get(0));
 			JSONObject returnObj = new JSONObject();
 			returnObj.put("activePlayer", currActivePlayer.getName());
@@ -206,6 +203,22 @@ public class Tabletop {
 		}
 	}
 	
+	public boolean isExpectedRaidResponder(String interruptId, String playerName) {
+		if(interruptibles.containsKey(interruptId)) {
+			Interrupt activeInterrupt = interruptibles.get(interruptId);
+			if(!(activeInterrupt instanceof RaidInterrupt)) {
+				return false;
+			}
+			RaidInterrupt activeHitInterrupt = (RaidInterrupt) activeInterrupt;
+			if(playerName.equals(activeHitInterrupt.getTarget())){
+				return true;
+			}
+			return false;
+		} else {
+			return false;
+		}
+	}
+	
 	public void handlePayday() {
 		currActivePlayer.addCoins(1);
 		advanceActivePlayer(); //Not possible to win or lose off this action
@@ -280,6 +293,25 @@ public class Tabletop {
 				String decoyChallenged = decoyInterrupt.getDecoyDeployer();
 				handleInterruptChallenge(interruptingPlayerName, decoyInterrupt, decoyChallenged, Roles.DECOY.name(), InterruptCase.ORDER_HIT_COUNTER);
 				break;
+			case SCRAMBLE_IDENTITY:
+				ScrambleInterrupt scrambleInterrupt = (ScrambleInterrupt) challengeableInterrupt;
+				String scrambleChallenged = scrambleInterrupt.getFocused();
+				handleInterruptChallenge(interruptingPlayerName, scrambleInterrupt, scrambleChallenged, Roles.NETOPS.name(), InterruptCase.SCRAMBLE_IDENTITY);
+				break;
+			case RAID:
+				RaidInterrupt raidInterrupt = (RaidInterrupt) challengeableInterrupt;
+				String raidChallenged = raidInterrupt.getRaider();
+				handleInterruptChallenge(interruptingPlayerName, raidInterrupt, raidChallenged, Roles.CAPTAIN.name(), InterruptCase.RAID);
+				break;
+			case RAID_COUNTER:
+				BlockInterrupt blockInterrupt = (BlockInterrupt) challengeableInterrupt;
+				String blockChallenged = blockInterrupt.getBlocker();
+				if(blockInterrupt.getBlockingRole().equals(Roles.CAPTAIN)) {
+					handleInterruptChallenge(interruptingPlayerName, blockInterrupt, blockChallenged, blockInterrupt.getBlockingRole().name(), InterruptCase.RAID_COUNTER_CPT);
+				} else {
+					handleInterruptChallenge(interruptingPlayerName, blockInterrupt, blockChallenged, blockInterrupt.getBlockingRole().name(), InterruptCase.RAID_COUNTER_NOPS);
+				}
+				break;
 		default:
 			tableController.notifyTableOfUnauthorizedActivity("Not a challengeable action: "+interruptCase+"|InterruptId: "+interruptId+"|InterruptingPlayer: "+interruptingPlayerName);
 			System.err.println("Not a challengeable action: "+interruptCase+"|InterruptId: "+interruptId+"|InterruptingPlayer: "+interruptingPlayerName);
@@ -295,6 +327,7 @@ public class Tabletop {
 			switch(interruptCase) {
 				case CROWDFUND_COUNTER:
 				case PRINT_MONEY:
+				case SCRAMBLE_IDENTITY:
 					ChallengeInterrupt twoPartyInterrupt = new ChallengeInterrupt(challengeId, challenged, interruptingPlayerName, interruptCase);
 					interruptibles.put(challengeId, twoPartyInterrupt);
 					break;
@@ -307,6 +340,17 @@ public class Tabletop {
 					DecoyInterrupt decoyInterrupt = (DecoyInterrupt) challengeableInterrupt;
 					ChallengeInterrupt challengedDecoyInterrupt = new ChallengeInterrupt(challengeId, challenged, interruptingPlayerName, interruptCase, decoyInterrupt.getHitOrderer());
 					interruptibles.put(challengeId, challengedDecoyInterrupt);
+					break;
+				case RAID:
+					RaidInterrupt raidInterrupt = (RaidInterrupt) challengeableInterrupt;
+					ChallengeInterrupt challengedRaidInterrupt = new ChallengeInterrupt(challengeId, challenged, interruptingPlayerName, interruptCase, raidInterrupt.getTarget());
+					interruptibles.put(challengeId, challengedRaidInterrupt);
+					break;
+				case RAID_COUNTER_CPT:
+				case RAID_COUNTER_NOPS:
+					BlockInterrupt blockInterrupt = (BlockInterrupt) challengeableInterrupt;
+					ChallengeInterrupt challengedBlockInterrupt = new ChallengeInterrupt(challengeId, challenged, interruptingPlayerName, interruptCase, blockInterrupt.getRaider());
+					interruptibles.put(challengeId, challengedBlockInterrupt);
 					break;
 				default:
 					tableController.notifyTableOfUnauthorizedActivity("Not a challengeable action: "+interruptCase+"|InterruptId: "+challengeId+"|InterruptingPlayer: "+interruptingPlayerName);
@@ -355,6 +399,18 @@ public class Tabletop {
 				case ORDER_HIT_COUNTER:
 					arbitrateChallenge(challengeInterrupt, cardIndexRsp, challenged, InterruptCase.ORDER_HIT_COUNTER_CHALLENGE_LOSS, Roles.DECOY);
 					break;
+				case SCRAMBLE_IDENTITY:
+					arbitrateChallenge(challengeInterrupt, cardIndexRsp, challenged, InterruptCase.SCRAMBLE_IDENTITY_CHALLENGE_LOSS, Roles.NETOPS);
+					break;
+				case RAID:
+					arbitrateChallenge(challengeInterrupt, cardIndexRsp, challenged, InterruptCase.RAID_CHALLENGE_LOSS, Roles.CAPTAIN);
+					break;
+				case RAID_COUNTER_CPT:
+					arbitrateChallenge(challengeInterrupt, cardIndexRsp, challenged, InterruptCase.RAID_COUNTER_CHALLENGE_LOSS, Roles.CAPTAIN);
+					break;
+				case RAID_COUNTER_NOPS:
+					arbitrateChallenge(challengeInterrupt, cardIndexRsp, challenged, InterruptCase.RAID_COUNTER_CHALLENGE_LOSS, Roles.NETOPS);
+					break;
 			default:
 				tableController.notifyTableOfUnauthorizedActivity("Challenge response received for invalid original action: "+challengeInterrupt.getActionChallenged()+" by "+challenged);
 				break;
@@ -374,6 +430,7 @@ public class Tabletop {
 				switch(actionToResolve) {
 					case CROWDFUND_COUNTER:
 					case PRINT_MONEY:
+					case SCRAMBLE_IDENTITY:
 						challengeLossInterrupt = new ChallengeInterrupt(challengeLossId, challenged, challenger, challengeLossCase, cardIndexRsp);
 						interruptibles.put(challengeLossId, challengeLossInterrupt);
 						break;
@@ -387,6 +444,9 @@ public class Tabletop {
 							return;
 						}
 					case ORDER_HIT_COUNTER:
+					case RAID:
+					case RAID_COUNTER_CPT:
+					case RAID_COUNTER_NOPS:
 						challengeLossInterrupt = new ChallengeInterrupt(challengeLossId, challenged, challenger, challengeLossCase, cardIndexRsp, challengeInterrupt.getThirdParty());
 						interruptibles.put(challengeLossId, challengeLossInterrupt);
 						break;
@@ -419,20 +479,34 @@ public class Tabletop {
 					case CROWDFUND_COUNTER:
 						//Counter to crowdfund was fraudulent, crowdfund proceeds
 						currActivePlayer.addCoins(2);
+						tableController.notifyTableWithSimpleMessage(currActivePlayer.getName() + " gets the word out on wheelOfFunding.com");
 						break;
 					case PRINT_MONEY:
-						//Printing was fraudulent, no effect
+					case SCRAMBLE_IDENTITY:
+					case RAID:
+						//Printing/Scramble/Raid was fraudulent, no effect
+						tableController.notifyTableWithSimpleMessage("Nothing happens.");
 						break;
 					case ORDER_HIT:
 						//Hit was fraudulent, fizzles, but player still loses money spent
 						currActivePlayer.addCoins(-3);
+						tableController.notifyTableWithSimpleMessage(challenged+"'s hitman was a fraud; he ran off with the down payment.");
 						break;
 					case ORDER_HIT_COUNTER:
 						//Decoy was fraudulent, challenged player immediately loses, hit orderer loses 3 coins
 						currActivePlayer.addCoins(-3);
 						challengedPlayer.eliminateCardInHand(0);
 						challengedPlayer.eliminateCardInHand(1);
-						tableController.notifyTableWithSimpleMessage(challenged+"'s decoy was a fraud; "+challenger+"'s hitman is baited into causing devastating collateral.");
+						tableController.notifyTableWithSimpleMessage(challenged+"'s decoy was a fraud; "+currActivePlayer.getName()+"'s hitman causes devastating collateral damage.");
+						break;
+					case RAID_COUNTER_CPT:
+						executeRaidCoinMove(challenged, challengeInterrupt.getThirdParty());
+						tableController.notifyTableWithSimpleMessage(challenged+"'s captain was a fraud; "+currActivePlayer.getName()+"'s raiding party neuters the poorly executed counterattack.");
+						break;
+					case RAID_COUNTER_NOPS:
+						executeRaidCoinMove(challenged, challengeInterrupt.getThirdParty());
+						tableController.notifyTableWithSimpleMessage(challenged+"'s netOps was a fraud; "+currActivePlayer.getName()+"'s raiding party's tech redundancies kick in.");
+						break;
 					default:
 						tableController.notifyTableOfUnauthorizedActivity("Invalid challenge loss case: "+challengeLossCase);
 				}
@@ -495,6 +569,7 @@ public class Tabletop {
 			InterruptCase actionToResolve = challengeLossInterrupt.getActionChallenged();
 			switch(actionToResolve) {
 				case CROWDFUND_COUNTER_CHALLENGE_LOSS:
+				case RAID_COUNTER_CHALLENGE_LOSS:
 					//Nothing should happen besides cards being lost and swapped. Counter prevents coins from being added.
 					advanceActivePlayer();
 					sendUpdatedBoardToPlayers(true);
@@ -511,6 +586,18 @@ public class Tabletop {
 				case ORDER_HIT_COUNTER_CHALLENGE_LOSS:
 					Player hitOrderer = playerMap.get(challengeLossInterrupt.getThirdParty());
 					hitOrderer.addCoins(-3);
+					advanceActivePlayer();
+					sendUpdatedBoardToPlayers(true);
+					break;
+				case SCRAMBLE_IDENTITY_CHALLENGE_LOSS:
+					sendUpdatedBoardToPlayers(false);
+					String scrambleGuaranteedId = UUID.randomUUID().toString();
+					ScrambleInterrupt interrupt = new ScrambleInterrupt(scrambleGuaranteedId,currActivePlayer.getName(), InterruptCase.SCRAMBLE_IDENTITY);
+					interruptibles.put(scrambleGuaranteedId, interrupt);
+					resolveScrambleIdentity1(scrambleGuaranteedId);
+					break;
+				case RAID_CHALLENGE_LOSS:
+					executeRaidCoinMove(challengeLossInterrupt.getThirdParty(), challenged);
 					advanceActivePlayer();
 					sendUpdatedBoardToPlayers(true);
 					break;
@@ -925,6 +1012,13 @@ public class Tabletop {
 				replaceableCount++;
 			}
 			if(cardIndicesToKeep.size() == replaceableCount) {
+				Set<Integer> dupeChecker = new HashSet<>();
+				dupeChecker.addAll(cardIndicesToKeep);
+				if(dupeChecker.size() != cardIndicesToKeep.size()) {
+					tableController.notifyTableOfUnauthorizedActivity("Invalid input for scramble identity, duplicate values detected: "+cardIndicesToKeep.toString());
+					return;
+				}
+				
 				List<Card> cardsToAdd = new ArrayList<>();
 				for(Integer indexToKeep : cardIndicesToKeep) {
 					Card cardToKeep = tempHoldingSpace.get(indexToKeep.intValue());
@@ -936,13 +1030,115 @@ public class Tabletop {
 					tempHoldingSpace.remove(cardToAdd);
 					currCards.add(cardToAdd);
 				}
+				currActivePlayer.updateJsonHandForExchange();
 				deck.add(tempHoldingSpace);
 				tempHoldingSpace.clear();
 				advanceActivePlayer();
 				sendUpdatedBoardToPlayers(true);
+				tableController.notifyTableWithSimpleMessage(currActivePlayer.getName()+" has new allies.");
 			} else {
 				tableController.notifyTableOfUnauthorizedActivity("Temp space for scrambleIdentity is not initially empty! Unable to proceed.");
 			}
+		}
+	}
+	
+	public void handleRaid(String targetPlayerName) {
+		Player targetPlayer = playerMap.get(targetPlayerName);
+		String raider = currActivePlayer.getName();
+		
+		if(targetPlayer != null && !targetPlayer.equals(currActivePlayer) && !targetPlayer.isLost()) {
+			String raidId = UUID.randomUUID().toString();
+			RaidInterrupt interrupt = new RaidInterrupt(raidId, INTERRUPT_WAIT_MS, raider, targetPlayerName, InterruptCase.RAID);
+			InterruptDefaultResolver interruptKillswitch = new InterruptDefaultResolver(raidId, INTERRUPT_WAIT_MS, this, InterruptCase.RAID);
+			interruptibles.put(raidId, interrupt);
+			JSONObject returnObj = buildRaidRsp(targetPlayerName, raider, raidId, raider + " is raiding the assets of " + targetPlayerName + ".");
+			
+			tableController.notifyTableOfRaid(returnObj.toJSONString());
+			Future<?> defaultResolverFuture = interruptThreadPool.submit(interruptKillswitch);
+			interrupt.setDefaultResolverFuture(defaultResolverFuture);
+		} else {
+			tableController.notifyTableOfUnauthorizedActivity("Invalid raid target: " + targetPlayerName);
+		}
+	}
+	
+	public void resolveRaid(String interruptId) {
+		RaidInterrupt raidInterrupt = null;
+		synchronized(interruptibles) {
+			if(interruptibles.containsKey(interruptId)) {
+				raidInterrupt = (RaidInterrupt) interruptibles.get(interruptId);
+				interruptibles.remove(interruptId);
+			}
+		}
+		
+		if(raidInterrupt != null) {
+			raidInterrupt.setActive(false);
+			String target = raidInterrupt.getTarget();
+			String raider = raidInterrupt.getRaider();
+			executeRaidCoinMove(target, raider);
+			tableController.notifyTableWithSimpleMessage(raider + " plunders some booty from " + target + ".");
+			advanceActivePlayer();
+			sendUpdatedBoardToPlayers(true);
+		}
+	}
+	
+	public void handleRaidCounter(String interruptId, Roles blockingRole) {
+		RaidInterrupt raidInterrupt = null;
+		synchronized(interruptibles) {
+			if(interruptibles.containsKey(interruptId)) {
+				raidInterrupt = (RaidInterrupt) interruptibles.get(interruptId);
+				interruptibles.remove(interruptId);
+			}
+		}
+		
+		if(raidInterrupt != null) {
+			raidInterrupt.setActive(false);
+			
+			String blockId = UUID.randomUUID().toString();
+			String raider = raidInterrupt.getRaider();
+			String blocker = raidInterrupt.getTarget();
+			BlockInterrupt blockInterrupt = new BlockInterrupt(blockId, INTERRUPT_WAIT_MS, InterruptCase.RAID_COUNTER, blocker, raider, blockingRole);
+			InterruptDefaultResolver interruptKillswitch = new InterruptDefaultResolver(blockId, INTERRUPT_WAIT_MS, this, InterruptCase.RAID_COUNTER);
+			interruptibles.put(blockId, blockInterrupt);
+			
+			if(Roles.NETOPS.equals(blockingRole)) {
+				JSONObject returnObj = buildInterruptOppRsp(blocker, "sabotage", blockId, blocker+" attempts to sabotage the raiding team's comms.");
+				tableController.notifyTableOfChallengeOpp(returnObj.toJSONString());
+			} else {
+				JSONObject returnObj = buildInterruptOppRsp(blocker, "fortify", blockId, blocker+" prepares a counterattack on the raiding team.");
+				tableController.notifyTableOfChallengeOpp(returnObj.toJSONString());
+			}
+			Future<?> defaultResolverFuture = interruptThreadPool.submit(interruptKillswitch);
+			blockInterrupt.setDefaultResolverFuture(defaultResolverFuture);
+		}
+	}
+	
+	public void resolveRaidCounter(String interruptId) {
+		BlockInterrupt blockInterrupt = null;
+		synchronized(interruptibles) {
+			if(interruptibles.containsKey(interruptId)) {
+				blockInterrupt = (BlockInterrupt) interruptibles.get(interruptId);
+				interruptibles.remove(interruptId);
+			}
+		}
+		
+		if(blockInterrupt != null) {
+			advanceActivePlayer();
+			sendUpdatedBoardToPlayers(true);
+		}
+	}
+	
+	private void executeRaidCoinMove(String targetName, String raiderName) {
+		Player targetPlayer = playerMap.get(targetName); 
+		Player raiderPlayer = playerMap.get(raiderName);
+		
+		int targetCoins = targetPlayer.getCoins();
+		if(targetCoins >= 2) {
+			targetPlayer.addCoins(-2);
+			raiderPlayer.addCoins(2);
+		} else {
+			int diff = targetCoins % 2;
+			targetPlayer.addCoins(-1*diff);
+			raiderPlayer.addCoins(diff);
 		}
 	}
 	
@@ -979,10 +1175,8 @@ public class Tabletop {
 	}
 	
 	private boolean advanceActivePlayer() {
-		System.out.println("CurrActivePlayer: "+currActivePlayer);
 		Player candidateActivePlayer = currActivePlayer.getNextPlayer();
 		while(candidateActivePlayer.isLost()) {
-			System.out.println("CandidateActivePlayer: "+candidateActivePlayer);
 			if(currActivePlayer.equals(candidateActivePlayer)){
 				return true; //currentActivePlayer is winner
 			}
@@ -1098,6 +1292,16 @@ public class Tabletop {
 		JSONObject returnObj = new JSONObject();
 		returnObj.put("tempCardPool", tempCardPool);
 		returnObj.put("interruptId", interruptId);
+		returnObj.put("msg", msg);
+		return returnObj;
+	}
+	
+	private JSONObject buildRaidRsp(String targetName, String raiderName, String interruptId, String msg) {
+		JSONObject returnObj = new JSONObject();
+		returnObj.put("target", targetName);
+		returnObj.put("raider", raiderName);
+		returnObj.put("interruptId", interruptId);
+		returnObj.put("rspWindowMs", INTERRUPT_WAIT_MS);
 		returnObj.put("msg", msg);
 		return returnObj;
 	}

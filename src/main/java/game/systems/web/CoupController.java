@@ -1,24 +1,25 @@
 package game.systems.web;
 
-import java.awt.Desktop.Action;
 import java.io.IOException;
 import java.security.NoSuchAlgorithmException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
 import javax.servlet.http.HttpServletRequest;
 
+import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.messaging.MessageHeaders;
-import org.springframework.messaging.handler.annotation.Headers;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import game.pieces.Roles;
 import game.systems.Tabletop;
 
 @RestController
@@ -238,7 +239,7 @@ public class CoupController {
 	public void handleGetVoidTargets(@Payload String body, MessageHeaders headers) {
 		AuthTuple authTuple = isMessageWellFormedForActivePlayerOnVoid(headers, "voidtargets", body);
 		if (authTuple.isWellFormed) {
-			table.handleGetTargets("void out", "voidout");
+			table.handleGetTargets("void out.", "voidout");
 		}
 	}
 
@@ -289,7 +290,7 @@ public class CoupController {
 	public void handleGetHitTargets(@Payload String body, MessageHeaders headers) {
 		AuthTuple authTuple = isMessageWellFormedForActivePlayer(headers, "hittargets", body);
 		if (authTuple.isWellFormed) {
-			table.handleGetTargets("order a hit on", "orderhit");
+			table.handleGetTargets("order a hit on.", "orderhit");
 		}
 	}
 
@@ -384,6 +385,103 @@ public class CoupController {
 			createAndDistributeErrorMsg("hitcounter|EmptyBody", headers, body);
 		}
 	}
+	
+	@MessageMapping("/scramble")
+	public void handleScrambleIdentity(@Payload String body, MessageHeaders headers) {
+		AuthTuple authTuple = isMessageWellFormedForActivePlayer(headers, "scrambleidentity", body);
+		if (authTuple.isWellFormed) {
+			table.handleScrambleIdentity();
+		}
+	}
+	
+	@MessageMapping("/scrambleselect")
+	public void handleScrambleSelect(@Payload String body, MessageHeaders headers) {
+		if (body != null && !body.isBlank()) {
+			JSONObject parsedJson = handleJsonInput(body, "scrambleselect", headers);
+			if (parsedJson != null) {
+				String interruptId = (String) parsedJson.get("interruptId");
+				AuthTuple authTuple = isMessageWellFormedForSingleResponder(headers, "scrambleselect", interruptId, body);
+				if (authTuple.isWellFormed) {
+					JSONArray chosen = (JSONArray) parsedJson.get("chosen");
+					if(!interruptId.isBlank() && !chosen.isEmpty()) {
+						List<Integer> convertedIntegers = new ArrayList<>();
+						for(Object arrayElem : chosen) {
+							convertedIntegers.add(Integer.valueOf((int)((long) arrayElem)));
+						}
+						table.resolveScrambleIdentity2(interruptId, convertedIntegers);
+					} else {
+						createAndDistributeErrorMsg("scrambleselect|MissingInterruptData", headers, body);
+					}
+				}
+			}
+		} else {
+			createAndDistributeErrorMsg("scrambleselect|EmptyBody", headers, body);
+		}
+	}
+	
+	@MessageMapping("/raidtargets")
+	public void handleGetRaidTargets(@Payload String body, MessageHeaders headers) {
+		System.out.println("raid target hit");
+		AuthTuple authTuple = isMessageWellFormedForActivePlayer(headers, "raidtargets", body);
+		if (authTuple.isWellFormed) {
+			table.handleGetTargets("raid.", "raid");
+		}
+	}
+	
+	@MessageMapping("/raid")
+	public void handleRaid(@Payload String body, MessageHeaders headers) {
+		System.out.println("handle raid hit");
+		AuthTuple authTuple = isMessageWellFormedForActivePlayer(headers, "raid", body);
+		if (authTuple.isWellFormed) {
+			if (body != null && !body.isBlank()) {
+				JSONObject parsedJson = handleJsonInput(body, "raid", headers);
+				if (parsedJson != null) {
+					String raidTarget = (String) parsedJson.get("target");
+					table.handleRaid(raidTarget);
+				}
+			}
+		}
+	}
+	
+	@MessageMapping("/raidcountercpt")
+	public void handleRaidCounterCpt(@Payload String body, MessageHeaders headers) {
+		if (body != null && !body.isBlank()) {
+			JSONObject parsedJson = handleJsonInput(body, "raidcountercpt", headers);
+			if (parsedJson != null) {
+				String interruptId = (String) parsedJson.get("interruptId");
+				AuthTuple authTuple = isMessageWellFormedForRaidResponder(headers, "raidcountercpt", interruptId, body);
+				if (authTuple.isWellFormed) {
+					if (!interruptId.isBlank()) {
+						table.handleRaidCounter(interruptId, Roles.CAPTAIN);
+					} else {
+						createAndDistributeErrorMsg("raidcountercpt|MissingInterruptData", headers, body);
+					}
+				}
+			}
+		} else {
+			createAndDistributeErrorMsg("raidcountercpt|EmptyBody", headers, body);
+		}
+	}
+	
+	@MessageMapping("/raidcounternops")
+	public void handleRaidCounterNops(@Payload String body, MessageHeaders headers) {
+		if (body != null && !body.isBlank()) {
+			JSONObject parsedJson = handleJsonInput(body, "raidcounternops", headers);
+			if (parsedJson != null) {
+				String interruptId = (String) parsedJson.get("interruptId");
+				AuthTuple authTuple = isMessageWellFormedForRaidResponder(headers, "raidcounternops", interruptId, body);
+				if (authTuple.isWellFormed) {
+					if (!interruptId.isBlank()) {
+						table.handleRaidCounter(interruptId, Roles.NETOPS);
+					} else {
+						createAndDistributeErrorMsg("raidcounternops|MissingInterruptData", headers, body);
+					}
+				}
+			}
+		} else {
+			createAndDistributeErrorMsg("raidcounternops|EmptyBody", headers, body);
+		}
+	}
 
 	private AuthTuple isMessageWellFormed(MessageHeaders headers, String action, String body) {
 		List<String> secretHeader = (List<String>) ((Map<String, Object>) headers.get("nativeHeaders")).get("secret");
@@ -470,6 +568,22 @@ public class CoupController {
 				return new AuthTuple(stage1AuthResult, false);
 			}
 			boolean isValid = table.isExpectedHitResponder(interruptId, stage1AuthResult.playerName);
+			if (!isValid) {
+				createAndDistributeErrorMsg(action + "|TargetedPlayerExpected", headers, body);
+			}
+			return new AuthTuple(stage1AuthResult, isValid);
+		} else {
+			return stage1AuthResult;
+		}
+	}
+	
+	private AuthTuple isMessageWellFormedForRaidResponder(MessageHeaders headers, String action, String interruptId, String body) {
+		AuthTuple stage1AuthResult = isMessageWellFormed(headers, action, body);
+		if (stage1AuthResult.isWellFormed) {
+			if (interruptId == null || interruptId.isBlank()) {
+				return new AuthTuple(stage1AuthResult, false);
+			}
+			boolean isValid = table.isExpectedRaidResponder(interruptId, stage1AuthResult.playerName);
 			if (!isValid) {
 				createAndDistributeErrorMsg(action + "|TargetedPlayerExpected", headers, body);
 			}

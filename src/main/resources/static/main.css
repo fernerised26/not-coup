@@ -248,6 +248,14 @@ body {
 	font-size: 2em;
 }
 
+#counterascaptain { 
+	font-size: 1.2em;
+}
+
+#counterasnetops { 
+	font-size: 1.2em;
+}
+
 #cell-2-3 {
 	color: #000000;
 	font-family: 'Share Tech Mono', monospace;
@@ -268,4 +276,36 @@ body {
 
 .hoverable-card:hover{
 	background-color: #ffa500;
+}
+
+.scramble-checkbox {
+	display: none;
+}
+
+.scramble-holder-row {
+	height: 80%;
+	width: 100%;
+	margin: 0px;
+	padding: 0px;
+}
+
+.scramble-card {
+	height: 100%;
+	margin: 0px;
+	padding: 4px;
+}
+
+.selected-scramble-card{
+	background-color: #ffa500;
+}
+
+.scramble-card:hover{
+	border: 2px solid #ffa500;
+}
+
+.checkbox-card {
+	height: 100%;
+	width: 100%;
+	top: 0px;
+	padding:0px;
 }
