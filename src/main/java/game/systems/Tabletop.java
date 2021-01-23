@@ -512,7 +512,7 @@ public class Tabletop {
 				}
 				
 				Player winnerCandidate = checkForWinner(challengedPlayer);
-				if(!DUMMY_PLAYER.equals(winnerCandidate)) {
+				if(winnerCandidate != null) {
 					sendUpdatedBoardToPlayers(false);
 					JSONObject returnObj = buildWinnerRsp(winnerCandidate.getName(), winnerCandidate.getName()+" is the winner!");
 					tableController.notifyTableOfWinner(returnObj.toJSONString());
@@ -549,7 +549,7 @@ public class Tabletop {
 				}
 				challengerPlayer.eliminateCardInHand(cardIndexRsp);
 				Player winnerCandidate = checkForWinner(challengerPlayer);
-				if(!DUMMY_PLAYER.equals(winnerCandidate)) {
+				if(winnerCandidate != null) {
 					sendUpdatedBoardToPlayers(false);
 					JSONObject returnObj = buildWinnerRsp(winnerCandidate.getName(), winnerCandidate.getName()+" is the winner!");
 					tableController.notifyTableOfWinner(returnObj.toJSONString());
@@ -701,7 +701,7 @@ public class Tabletop {
 				}
 				Card voidedCard = voidedPlayer.eliminateCardInHand(cardIndexRsp);
 				Player winnerCandidate = checkForWinner(voidedPlayer);
-				if(!DUMMY_PLAYER.equals(winnerCandidate)) {
+				if(winnerCandidate != null) {
 					sendUpdatedBoardToPlayers(false);
 					JSONObject returnObj = buildWinnerRsp(winnerCandidate.getName(), winnerCandidate.getName()+" is the winner!");
 					tableController.notifyTableOfWinner(returnObj.toJSONString());
@@ -799,7 +799,7 @@ public class Tabletop {
 				Card eliminatedCard = targetPlayer.eliminateCardInHand(cardIndexRsp);
 				hitOrdererPlayer.addCoins(-3);
 				Player winnerCandidate = checkForWinner(targetPlayer);
-				if(!DUMMY_PLAYER.equals(winnerCandidate)) {
+				if(winnerCandidate != null) {
 					sendUpdatedBoardToPlayers(false);
 					JSONObject returnObj = buildWinnerRsp(winnerCandidate.getName(), winnerCandidate.getName()+" is the winner!");
 					tableController.notifyTableOfWinner(returnObj.toJSONString());
@@ -835,9 +835,9 @@ public class Tabletop {
 					tableController.notifyTableOfUnauthorizedActivity("Player attempted to eliminate an already eliminated card: "+forced+"| "+cardIndexRsp);
 					return;
 				}
-				Card eliminatedCard = forcedPlayer.eliminateCardInHand(cardIndexRsp);
+				forcedPlayer.eliminateCardInHand(cardIndexRsp);
 				Player winnerCandidate = checkForWinner(forcedPlayer);
-				if(!DUMMY_PLAYER.equals(winnerCandidate)) {
+				if(winnerCandidate != null) {
 					sendUpdatedBoardToPlayers(false);
 					JSONObject returnObj = buildWinnerRsp(winnerCandidate.getName(), winnerCandidate.getName()+" is the winner!");
 					tableController.notifyTableOfWinner(returnObj.toJSONString());
@@ -882,7 +882,7 @@ public class Tabletop {
 			}
 			
 			Player winnerCandidate = checkForWinner(utterlyLostPlayer);
-			if(!DUMMY_PLAYER.equals(winnerCandidate)) {
+			if(winnerCandidate != null) {
 				sendUpdatedBoardToPlayers(false);
 				JSONObject returnObj = buildWinnerRsp(winnerCandidate.getName(), winnerCandidate.getName()+" is the winner!");
 				tableController.notifyTableOfWinner(returnObj.toJSONString());
@@ -895,7 +895,7 @@ public class Tabletop {
 			challengedPlayer.replaceCardInHand(deck.drawOne(), defenderIndexCardToReplace);
 			tableController.notifyTableWithSimpleMessage(challenged+" replaces the revealed " + defendedCard.getRole().name() + " with a new card.");
 			advanceActivePlayer();
-			sendUpdatedBoardToPlayers(false);
+			sendUpdatedBoardToPlayers(true);
 		}
 	}
 	
@@ -1190,14 +1190,14 @@ public class Tabletop {
 	}
 	
 	private Player checkForWinner(Player playerAtRisk) {
-		if(playerAtRisk.getCardInHand(0).isFaceUp() && playerAtRisk.getCardInHand(1).isFaceUp()) {
+		if(playerAtRisk.getCardInHand(0).isEliminated() && playerAtRisk.getCardInHand(1).isEliminated()) {
 			playerAtRisk.eliminatePlayer();
 			Player tempPlayer = null;
 			boolean onePlayerNotLost = false;
 			for(Entry<String, Player> playerEntry : playerMap.entrySet()) {
 				boolean isCurrentPlayerLost = playerEntry.getValue().isLost();
 				if(!isCurrentPlayerLost) {
-					if(onePlayerNotLost && isCurrentPlayerLost) {
+					if(onePlayerNotLost && !isCurrentPlayerLost) {
 						return null; //no winner yet
 					} else {
 						onePlayerNotLost = true;
@@ -1210,10 +1210,10 @@ public class Tabletop {
 				return tempPlayer; //Sole survivor is winner
 			} else {
 				tableController.notifyTableOfUnauthorizedActivity("All players lost, should not be possible");
-				return DUMMY_PLAYER;
+				return null;
 			}
 		} else {
-			return DUMMY_PLAYER;
+			return null;
 		}
 	}
 
