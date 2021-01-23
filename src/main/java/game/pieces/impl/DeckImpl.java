@@ -16,7 +16,6 @@ public class DeckImpl implements Deck {
 
 	@Override
 	public void initialize() throws IOException {
-//		System.out.println("Deck contents1: "+deck);
 		deck.clear();
 		Roles[] roles = Roles.values();
 		for (int roleIndex = 0; roleIndex < roles.length; roleIndex++) {
@@ -24,9 +23,7 @@ public class DeckImpl implements Deck {
 				deck.add(CardCreator.createCard(roles[roleIndex]));
 			}
 		}
-//		System.out.println("Deck contents2: "+deck);
 		shuffle();
-//		System.out.println("Deck contents3: "+deck);
 	}
 
 	@Override
@@ -71,5 +68,10 @@ public class DeckImpl implements Deck {
 	public void add(Card cardToAdd) {
 		cardToAdd.flipDown();
 		deck.add(cardToAdd);
+	}
+	
+	@Override
+	public int getDeckSize() {
+		return deck.size();
 	}
 }

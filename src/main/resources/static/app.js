@@ -180,6 +180,14 @@ function confirmUsername(){
 
 function startRound() {
 	stompClient.send("/app/roundstart", {}, myName);
+} 
+
+function shufflePlayers() {
+	$("#shufflePlayers").prop("disabled", true);
+	setTimeout(function(){
+		$("#shufflePlayers").prop("disabled", false);
+	}, 1000);
+	stompClient.send("/app/shuffleplayers", {}, myName);
 }
 
 function reactLobbyEvent(message) {
@@ -191,9 +199,9 @@ function reactLobbyEvent(message) {
 		case "unauthorized":
 			$("#log-window").html(message.body);
 			break;
-		case "fail": {
-				let failMsg = JSON.parse(message.body);
-				$("#log-window").html(failMsg.msg);
+		case "logwindow": {
+				let logWindowMsg = JSON.parse(message.body);
+				$("#log-window").html(logWindowMsg.msg);
 			}
 			break;
 		case "simpmsg":{
@@ -471,6 +479,7 @@ function reactPersonalEvent(message){
 	switch(headerCase){
 		case "init": {
 				document.getElementById("startRound").disabled = true;
+				document.getElementById("shufflePlayers").disabled = true;
 				let tableStarter = JSON.parse(message.body);
 				let myPlayerSpot = document.getElementById("self-player");
 				let myPlayerSpotHotElems = initPlayerBox(myPlayerSpot, myName);
@@ -478,6 +487,7 @@ function reactPersonalEvent(message){
 				let masterPlayerOrder = JSON.parse(message.headers.order);
 				initPlayers(tableStarter.boardState, masterPlayerOrder);
 				handleActivePlayer(tableStarter.activePlayer, tableStarter.boardState);
+				document.getElementById("deck-size").innerHTML = tableStarter.deckSize;
 			}
 			break;
 		case "update": {
@@ -1296,6 +1306,7 @@ $(function () {
     $("#disconnect").click(function() { disconnect(); });
 	$("#join").click(function() { confirmUsername(); });
 	$("#startRound").click(function() { startRound(); });
+	$("#shufflePlayers").click(function() { shufflePlayers(); });
 	$("#payday").click(function() { payday(); });
 	$("#crowdfund").click(function() { crowdfund(); });
 	$("#printmoney").click(function() { printMoney(); });

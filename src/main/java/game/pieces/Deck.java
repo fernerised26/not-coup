@@ -11,4 +11,5 @@ public interface Deck {
 	public Card drawOne();
 	public void add(List<Card> cardsToAdd);
 	public void add(Card cardToAdd);
+	public int getDeckSize();
 }

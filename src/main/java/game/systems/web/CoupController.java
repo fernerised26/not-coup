@@ -108,10 +108,15 @@ public class CoupController {
 			} catch (IOException e) {
 				rspObj.put("code", 5);
 				rspObj.put("msg", "Invalid player role");
-				tableController.notifyTableOfError(rspObj.toJSONString());
+				tableController.notifyTableInLog(rspObj.toJSONString());
 			}
 		}
-		tableController.notifyTableOfError(rspObj.toJSONString());
+		tableController.notifyTableInLog(rspObj.toJSONString());
+	}
+	
+	@MessageMapping("/shuffleplayers")
+	public void shufflePlayers() {
+		table.shufflePlayers();
 	}
 
 	@MessageMapping("/payday")
@@ -421,7 +426,6 @@ public class CoupController {
 	
 	@MessageMapping("/raidtargets")
 	public void handleGetRaidTargets(@Payload String body, MessageHeaders headers) {
-		System.out.println("raid target hit");
 		AuthTuple authTuple = isMessageWellFormedForActivePlayer(headers, "raidtargets", body);
 		if (authTuple.isWellFormed) {
 			table.handleGetTargets("raid.", "raid");
@@ -430,7 +434,6 @@ public class CoupController {
 	
 	@MessageMapping("/raid")
 	public void handleRaid(@Payload String body, MessageHeaders headers) {
-		System.out.println("handle raid hit");
 		AuthTuple authTuple = isMessageWellFormedForActivePlayer(headers, "raid", body);
 		if (authTuple.isWellFormed) {
 			if (body != null && !body.isBlank()) {

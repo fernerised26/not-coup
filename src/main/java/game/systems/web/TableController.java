@@ -11,7 +11,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class TableController {
 	
 	private static final Map<String, Object> PLAYER_CHANGE_HEADER = new HashMap<>();
-	private static final Map<String, Object> FAIL = new HashMap<>();
+	private static final Map<String, Object> LOG_WINDOW = new HashMap<>();
 	private static final Map<String, Object> UNAUTHORIZED_ACTIVITY_DETECTED = new HashMap<>();
 	private static final Map<String, Object> GROUP_COUNTER_OPP = new HashMap<>();
 	private static final Map<String, Object> CHALLENGE_OPP = new HashMap<>();
@@ -28,7 +28,7 @@ public class TableController {
 //	private static final Map<String, Object> PLAYER_ORDER = new HashMap<>();
 	static {
 		PLAYER_CHANGE_HEADER.put("case", "playerchange");
-		FAIL.put("case", "fail");
+		LOG_WINDOW.put("case", "logwindow");
 		UNAUTHORIZED_ACTIVITY_DETECTED.put("case", "unauthorized");
 		GROUP_COUNTER_OPP.put("case", "groupcounteropp");
 		CHALLENGE_OPP.put("case", "challengeopp");
@@ -52,8 +52,8 @@ public class TableController {
 		this.msgTemplate.convertAndSend("/topic/lobbyevents", playerListHtml, PLAYER_CHANGE_HEADER);
 	}
 	
-	public void notifyTableOfError(String message) {
-		this.msgTemplate.convertAndSend("/topic/lobbyevents", message, FAIL);
+	public void notifyTableInLog(String message) {
+		this.msgTemplate.convertAndSend("/topic/lobbyevents", message, LOG_WINDOW);
 	}
 	
 	public void notifyTableOfUnauthorizedActivity(String message) {

@@ -7,6 +7,7 @@ import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.UUID;
@@ -85,6 +86,7 @@ public class Tabletop {
 		synchronized(playerMap) {
 			if(roundActive) {
 				playerMap.remove(name);
+				orderedPlayerNames.remove(name);
 				String playerListHtml = convertSetToHtml(playerMap.keySet());
 				tableController.notifyTableOfPlayerChange(playerListHtml);
 			}
@@ -93,6 +95,59 @@ public class Tabletop {
 	
 	public boolean isPlayerPresent(String name) {
 		return playerMap.containsKey(name);
+	}
+	
+	public void shufflePlayers() {
+		if(playerMap.size() <= 1) {
+			return;
+		}
+		synchronized(playerMap) {
+			Random rand = new Random();
+			for (int i = orderedPlayerNames.size(); i > 1; i--) {
+				int randomPoint = rand.nextInt(i);
+				String tmpPlayerName = (String) orderedPlayerNames.get(i - 1);
+				orderedPlayerNames.set(i - 1, orderedPlayerNames.get(randomPoint));
+				orderedPlayerNames.set(randomPoint, tmpPlayerName);
+			}
+			
+			Map<String, Player> newPlayerMap = new LinkedHashMap<>();
+			
+			for (int i = 0; i < orderedPlayerNames.size(); i++) {
+				if(i == 0) {
+					String player1Name = (String) orderedPlayerNames.get(0);
+					Player player1 = playerMap.get(player1Name);
+					
+					String player2Name = (String) orderedPlayerNames.get(1);
+					Player player2 = playerMap.get(player2Name);
+					player1.setNextPlayer(player2);
+					newPlayerMap.put(player1Name, player1);
+				} else if(i == (orderedPlayerNames.size() - 1)) {
+					String playerLastName = (String) orderedPlayerNames.get(i);
+					Player playerLast = playerMap.get(playerLastName);
+					
+					String playerPenultimateName = (String) orderedPlayerNames.get(i-1);
+					Player playerPenultimate = playerMap.get(playerPenultimateName);
+					playerLast.setPrevPlayer(playerPenultimate);
+					newPlayerMap.put(playerLastName, playerLast);
+				} else {
+					String currPlayerName = (String) orderedPlayerNames.get(i);
+					Player currPlayer = playerMap.get(currPlayerName);
+					
+					String prevPlayerName = (String) orderedPlayerNames.get(i-1);
+					Player prevPlayer = playerMap.get(prevPlayerName);
+					currPlayer.setPrevPlayer(prevPlayer);
+					
+					String nextPlayerName = (String) orderedPlayerNames.get(i+1);
+					Player nextPlayer = playerMap.get(nextPlayerName);
+					currPlayer.setPrevPlayer(nextPlayer);
+					
+					newPlayerMap.put(currPlayerName, currPlayer);
+				}
+			}
+			playerMap = newPlayerMap;
+			String playerListHtml = convertSetToHtml(playerMap.keySet());
+			tableController.notifyTableOfPlayerChange(playerListHtml);
+		}
 	}
 	
 	public boolean startRound() throws IOException {
@@ -104,12 +159,22 @@ public class Tabletop {
 			lastPlayerToJoin.setNextPlayer(firstPlayerToJoin);
 			firstPlayerToJoin.setPrevPlayer(lastPlayerToJoin);
 			
-			for(Entry<String, Player> playerEntry : playerMap.entrySet()) {
-				Player currPlayer = playerEntry.getValue();
-				
-				List<Card> cardsDrawn = deck.draw(2);
-				currPlayer.addCardsInit(cardsDrawn);
-				currPlayer.addCoins(2);
+			if(playerMap.size() == 2) {
+				for(Entry<String, Player> playerEntry : playerMap.entrySet()) {
+					Player currPlayer = playerEntry.getValue();
+					
+					List<Card> cardsDrawn = deck.draw(2);
+					currPlayer.addCardsInit(cardsDrawn);
+					currPlayer.addCoins(1);
+				}
+			} else {
+				for(Entry<String, Player> playerEntry : playerMap.entrySet()) {
+					Player currPlayer = playerEntry.getValue();
+					
+					List<Card> cardsDrawn = deck.draw(2);
+					currPlayer.addCardsInit(cardsDrawn);
+					currPlayer.addCoins(2);
+				}
 			}
 			
 			currActivePlayer = playerMap.get(orderedPlayerNames.get(0));
@@ -120,7 +185,8 @@ public class Tabletop {
 				JSONObject maskedPlayerJson = getMaskedPlayerMapAsJson(currPlayerName);
 				returnObj.put("boardState", maskedPlayerJson);
 				playerController.contactPlayerInitTable(currPlayerName, orderedPlayerNames.toJSONString(), returnObj.toJSONString());
-			}			
+			}
+			returnObj.put("deckSize", "Cards in Deck: "+deck.getDeckSize());
 			return roundActive;
 		}
 	}
