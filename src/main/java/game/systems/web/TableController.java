@@ -101,7 +101,6 @@ public class TableController {
 	}
 	
 	public void notifyTableOfRaid(String message) {
-		System.out.println("notify table raid hit");
 		this.msgTemplate.convertAndSend("/topic/lobbyevents", message, RAID);
 	}
 	

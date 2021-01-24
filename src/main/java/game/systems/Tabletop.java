@@ -180,13 +180,13 @@ public class Tabletop {
 			currActivePlayer = playerMap.get(orderedPlayerNames.get(0));
 			JSONObject returnObj = new JSONObject();
 			returnObj.put("activePlayer", currActivePlayer.getName());
+			returnObj.put("deckSize", "Cards in Deck: "+deck.getDeckSize());
 			for(Entry<String, Player> playerEntry : playerMap.entrySet()) {
 				String currPlayerName = playerEntry.getKey();
 				JSONObject maskedPlayerJson = getMaskedPlayerMapAsJson(currPlayerName);
 				returnObj.put("boardState", maskedPlayerJson);
 				playerController.contactPlayerInitTable(currPlayerName, orderedPlayerNames.toJSONString(), returnObj.toJSONString());
 			}
-			returnObj.put("deckSize", "Cards in Deck: "+deck.getDeckSize());
 			return roundActive;
 		}
 	}
@@ -287,6 +287,7 @@ public class Tabletop {
 	
 	public void handlePayday() {
 		currActivePlayer.addCoins(1);
+		tableController.notifyTableWithSimpleMessage(currActivePlayer.getName()+" takes a payday.");
 		advanceActivePlayer(); //Not possible to win or lose off this action
 		sendUpdatedBoardToPlayers(true);
 	}
@@ -607,7 +608,8 @@ public class Tabletop {
 			String challenged = challengeLossInterrupt.getChallenged();
 			String challenger = challengeLossInterrupt.getChallenger();
 			Player challengerPlayer = playerMap.get(challenger);
-			Player challengedPlayer = playerMap.get(challenged); 
+			Player challengedPlayer = playerMap.get(challenged);
+			StringBuilder flavorMsg = new StringBuilder();
 			if(cardIndexRsp == 0 || cardIndexRsp == 1) {
 				if(challengerPlayer.getCardInHand(cardIndexRsp).isEliminated()) {
 					tableController.notifyTableOfUnauthorizedActivity("Player attempted to eliminate an already eliminated card: "+challenger+"| "+cardIndexRsp);
@@ -627,7 +629,7 @@ public class Tabletop {
 				deck.add(defendedCard);
 				deck.shuffle();
 				challengedPlayer.replaceCardInHand(deck.drawOne(), defenderIndexCardToReplace);
-				tableController.notifyTableWithSimpleMessage(challenged+" replaces the revealed " + defendedCard.getRole().name() + " with a new card.");
+				flavorMsg.append(challenged+" replaces the revealed " + defendedCard.getRole().name()+". ");
 			} else {
 				tableController.notifyTableOfUnauthorizedActivity("Invalid card index (not 0 or 1) from "+challenger+": "+cardIndexRsp);
 			}
@@ -637,11 +639,15 @@ public class Tabletop {
 				case CROWDFUND_COUNTER_CHALLENGE_LOSS:
 				case RAID_COUNTER_CHALLENGE_LOSS:
 					//Nothing should happen besides cards being lost and swapped. Counter prevents coins from being added.
+					flavorMsg.append("Action fizzles.");
+					tableController.notifyTableWithSimpleMessage(flavorMsg.toString());
 					advanceActivePlayer();
 					sendUpdatedBoardToPlayers(true);
 					break;
 				case PRINT_MONEY_CHALLENGE_LOSS:
 					challengedPlayer.addCoins(3);
+					flavorMsg.append(challengedPlayer.getName() + " sets sales records with a new product.");
+					tableController.notifyTableWithSimpleMessage(flavorMsg.toString());
 					advanceActivePlayer();
 					sendUpdatedBoardToPlayers(true);
 					break;
@@ -652,6 +658,8 @@ public class Tabletop {
 				case ORDER_HIT_COUNTER_CHALLENGE_LOSS:
 					Player hitOrderer = playerMap.get(challengeLossInterrupt.getThirdParty());
 					hitOrderer.addCoins(-3);
+					flavorMsg.append(hitOrderer.getName() + "'s hit on " + challengeLossInterrupt.getChallenged() + "is botched.");
+					tableController.notifyTableWithSimpleMessage(flavorMsg.toString());
 					advanceActivePlayer();
 					sendUpdatedBoardToPlayers(true);
 					break;
@@ -664,6 +672,8 @@ public class Tabletop {
 					break;
 				case RAID_CHALLENGE_LOSS:
 					executeRaidCoinMove(challengeLossInterrupt.getThirdParty(), challenged);
+					flavorMsg.append(challengeLossInterrupt.getThirdParty() + "'s booty is plundered by " + challenged + ".");
+					tableController.notifyTableWithSimpleMessage(flavorMsg.toString());
 					advanceActivePlayer();
 					sendUpdatedBoardToPlayers(true);
 					break;
@@ -686,6 +696,9 @@ public class Tabletop {
 		if(activeInterrupt != null) {
 			if(isSuccess) {
 				currActivePlayer.addCoins(2);
+				tableController.notifyTableWithSimpleMessage(currActivePlayer.getName()+"'s fundMyThing campaign for " + CrowdfundRandomizer.getRandomCampaign() + " is a success.");
+			} else {
+				tableController.notifyTableWithSimpleMessage(currActivePlayer.getName()+"'s gibMoneyPlz campaign for " + CrowdfundRandomizer.getRandomCampaign() + " fizzles out.");
 			}
 			advanceActivePlayer();
 			sendUpdatedBoardToPlayers(true);
@@ -811,6 +824,7 @@ public class Tabletop {
 		
 		if(activeInterrupt != null) {
 			currActivePlayer.addCoins(3);
+			tableController.notifyTableWithSimpleMessage(currActivePlayer.getName() + " sets sales records with a new product.");
 			advanceActivePlayer();
 			sendUpdatedBoardToPlayers(true);
 		}
@@ -1002,6 +1016,7 @@ public class Tabletop {
 		
 		if(decoyInterrupt != null) {
 			currActivePlayer.addCoins(-3);
+			tableController.notifyTableWithSimpleMessage(currActivePlayer.getName() + "'s hit killed nothing but time.");
 			advanceActivePlayer();
 			sendUpdatedBoardToPlayers(true);
 		}
@@ -1099,9 +1114,9 @@ public class Tabletop {
 				currActivePlayer.updateJsonHandForExchange();
 				deck.add(tempHoldingSpace);
 				tempHoldingSpace.clear();
+				tableController.notifyTableWithSimpleMessage(currActivePlayer.getName()+" has new allies.");
 				advanceActivePlayer();
 				sendUpdatedBoardToPlayers(true);
-				tableController.notifyTableWithSimpleMessage(currActivePlayer.getName()+" has new allies.");
 			} else {
 				tableController.notifyTableOfUnauthorizedActivity("Temp space for scrambleIdentity is not initially empty! Unable to proceed.");
 			}
@@ -1188,6 +1203,11 @@ public class Tabletop {
 		}
 		
 		if(blockInterrupt != null) {
+			if(blockInterrupt.getBlockingRole().equals(Roles.CAPTAIN)) {
+				tableController.notifyTableWithSimpleMessage(currActivePlayer.getName() + "'s raid on " + blockInterrupt.getBlocker() + " is broken on its flanks.");
+			} else {
+				tableController.notifyTableWithSimpleMessage(blockInterrupt.getBlocker() + " hacks into " + currActivePlayer.getName() + "'s network to throw the raiders into disarray.");
+			}
 			advanceActivePlayer();
 			sendUpdatedBoardToPlayers(true);
 		}

@@ -221,9 +221,9 @@ function reactLobbyEvent(message) {
 				progressBarChild.setAttribute("aria-valuenow", "100");
 				progressBarChild.style.width = "100%";
 				progressBarChild.innerText = (rspWindowMs / 1000) + "secs";
+				latestInterruptId = groupCounterMsg.interruptId;
 				
 				if(myName !== playerToCounter){
-					latestInterruptId = groupCounterMsg.interruptId;
 					let actionToCounter = groupCounterMsg.interruptFor;
 					let bottomRight = document.getElementById("cell-5-3");
 					center.innerHTML = groupCounterMsg.msg;
