@@ -260,6 +260,7 @@ body {
 	color: #000000;
 	font-family: 'Share Tech Mono', monospace;
 	font-size: 2em;
+	padding: 2px;
 }
 
 #singleton-progress-bar {

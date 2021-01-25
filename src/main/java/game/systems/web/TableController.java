@@ -24,6 +24,7 @@ public class TableController {
 	private static final Map<String, Object> FORCED_HIT_ORDER = new HashMap<>();
 	private static final Map<String, Object> UTTER_DEFEAT = new HashMap<>();
 	private static final Map<String, Object> RAID = new HashMap<>();
+	private static final Map<String, Object> RESET = new HashMap<>();
 //	private static final Map<String, Object> ACTIVE_PLAYER_UPDATE = new HashMap<>();
 //	private static final Map<String, Object> PLAYER_ORDER = new HashMap<>();
 	static {
@@ -41,6 +42,7 @@ public class TableController {
 		FORCED_HIT_ORDER.put("case", "forcedhit");
 		UTTER_DEFEAT.put("case", "utterdefeat");
 		RAID.put("case", "raid");
+		RESET.put("case", "reset");
 //		ACTIVE_PLAYER_UPDATE.put("case", "activeplayer");
 //		PLAYER_ORDER.put("case", "playerorder");
 	}
@@ -102,6 +104,10 @@ public class TableController {
 	
 	public void notifyTableOfRaid(String message) {
 		this.msgTemplate.convertAndSend("/topic/lobbyevents", message, RAID);
+	}
+	
+	public void notifyTableOfReset(String message) {
+		this.msgTemplate.convertAndSend("/topic/lobbyevents", message, RESET);
 	}
 	
 //	public void notifyTableOfCurrentActivePlayer(String message) {

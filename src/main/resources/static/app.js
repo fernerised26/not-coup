@@ -7,6 +7,7 @@ var activeDivNames = null;
 var latestInterruptId = null;
 var isVoidLocked = null;
 var playerDivClickFuncs = [];
+var shuffleId = null;
 
 const twoPlayerDivNames = ["self-player", "2p1"];
 const threePlayerDivNames = ["self-player", "3p1", "3p2"];
@@ -16,15 +17,21 @@ const sixPlayerDivNames = ["self-player", "6p1", "6p2", "6p3", "6p4", "6p5"];
 
 const captainImgSrc = "imgs/CaptainV3.svg";
 const decoyImgSrc = "imgs/Decoy.svg";
-const hitmanImgSrc = "imgs/Hitman.svg"
-const mogulImgSrc = "imgs/Mogul.svg"
-const netOpsImgSrc = "imgs/NetOps.svg"
-const unrevealedImgSrc = "imgs/Unrevealed.svg"
+const hitmanImgSrc = "imgs/Hitman.svg";
+const mogulImgSrc = "imgs/Mogul.svg";
+const netOpsImgSrc = "imgs/NetOps.svg";
+const unrevealedImgSrc = "imgs/Unrevealed.svg";
 const captainElimImgSrc = "imgs/CaptainElim.svg";
 const decoyElimImgSrc = "imgs/DecoyElim.svg";
-const hitmanElimImgSrc = "imgs/HitmanElim.svg"
-const mogulElimImgSrc = "imgs/MogulElim.svg"
-const netOpsElimImgSrc = "imgs/NetOpsElim.svg"
+const hitmanElimImgSrc = "imgs/HitmanElim.svg";
+const mogulElimImgSrc = "imgs/MogulElim.svg";
+const netOpsElimImgSrc = "imgs/NetOpsElim.svg";
+
+var winAudio = document.createElement("audio");
+var winAudioSrcElem = document.createElement("source");
+winAudioSrcElem.setAttribute("src", "audio/smashKO.mp3");
+winAudioSrcElem.setAttribute("type", "audio/mpeg");
+winAudio.appendChild(winAudioSrcElem);
 
 const captainHoverText = "[Captain]\nEnables [Raid]\nCounters [Raid]"
 const decoyHoverText = "[Decoy]\nCounters [Order Hit]";
@@ -100,6 +107,13 @@ submitScrambleButton.setAttribute("class","btn cntr-btn");
 submitScrambleButton.setAttribute("title","Lock-in the card(s) to keep");
 submitScrambleButton.setAttribute("type","submit");
 submitScrambleButton.disabled = true;
+var resetButton = document.createElement("button");
+resetButton.innerHTML = "Reset";
+resetButton.setAttribute("id","resetbutton");
+resetButton.setAttribute("class","btn cntr-btn");
+resetButton.setAttribute("title","Reset the table");
+resetButton.setAttribute("type","submit");
+resetButton.disabled = true;
 
 var progressBarParent = document.createElement("div");
 progressBarParent.className = "progress";
@@ -184,7 +198,7 @@ function startRound() {
 
 function shufflePlayers() {
 	$("#shufflePlayers").prop("disabled", true);
-	setTimeout(function(){
+	shuffleId = setTimeout(function(){
 		$("#shufflePlayers").prop("disabled", false);
 	}, 1000);
 	stompClient.send("/app/shuffleplayers", {}, myName);
@@ -224,16 +238,19 @@ function reactLobbyEvent(message) {
 				latestInterruptId = groupCounterMsg.interruptId;
 				
 				if(myName !== playerToCounter){
-					let actionToCounter = groupCounterMsg.interruptFor;
-					let bottomRight = document.getElementById("cell-5-3");
+					let lostPlayers = groupCounterMsg.lost;
 					center.innerHTML = groupCounterMsg.msg;
-					switch(actionToCounter){
-						case "crowdfund":
-							bottomRight.appendChild(counterCrowdfundButton);
-							bottomRight.appendChild(skipButton);
-							break;
-						default:
-							console.error("Unknown action to counter: "+actionToCounter); 
+					if(lostPlayers.indexOf(myName) === -1) {
+						let actionToCounter = groupCounterMsg.interruptFor;
+						let bottomRight = document.getElementById("cell-5-3");
+						switch(actionToCounter){
+							case "crowdfund":
+								bottomRight.appendChild(counterCrowdfundButton);
+								bottomRight.appendChild(skipButton);
+								break;
+							default:
+								console.error("Unknown action to counter: "+actionToCounter); 
+						}
 					}
 				} else {
 					center.innerHTML = "Waiting for other players...";
@@ -257,21 +274,24 @@ function reactLobbyEvent(message) {
 				progressBarChild.innerText = (rspWindowMs / 1000) + "secs";
 				
 				if(myName !== playerToChallenge){
-					let actionToChallenge = groupCounterMsg.interruptFor;
-					let bottomRight = document.getElementById("cell-5-3");
+					let lostPlayers = groupCounterMsg.lost;
 					center.innerHTML = groupCounterMsg.msg;
-					switch(actionToChallenge){
-						case "crowdfundCounter":
-						case "printMoney":
-						case "decoy":
-						case "scrambleIdentity":
-						case "sabotage":
-						case "fortify":
-							bottomRight.appendChild(challengeButton);
-							bottomRight.appendChild(skipButton);
-							break;
-						default:
-							console.error("Unknown action to counter: "+actionToChallenge); 
+					if(lostPlayers.indexOf(myName) === -1) {
+						let actionToChallenge = groupCounterMsg.interruptFor;
+						let bottomRight = document.getElementById("cell-5-3");
+						switch(actionToChallenge){
+							case "crowdfundCounter":
+							case "printMoney":
+							case "decoy":
+							case "scrambleIdentity":
+							case "sabotage":
+							case "fortify":
+								bottomRight.appendChild(challengeButton);
+								bottomRight.appendChild(skipButton);
+								break;
+							default:
+								console.error("Unknown action to counter: "+actionToChallenge); 
+						}
 					}
 				} else {
 					center.innerHTML = "Waiting for other players...";
@@ -351,6 +371,11 @@ function reactLobbyEvent(message) {
 					actBtns[btnIdx].disabled =  true;
 				}
 				disableActionButtons();
+				winAudio.play();
+				
+				let bottomRight = document.getElementById("cell-5-3");
+				bottomRight.appendChild(resetButton);
+				resetButton.disabled = false;
 			}
 			break;
 		case "hitorder": {
@@ -377,8 +402,11 @@ function reactLobbyEvent(message) {
 				} else {
 					latestInterruptId = hitOrderMsg.interruptId;
 					center.innerHTML = hitOrderMsg.msg;
-					bottomRight.appendChild(skipNonTimedButton);
-					bottomRight.appendChild(challengeButton);
+					let lostPlayers = hitOrderMsg.lost;
+					if(lostPlayers.indexOf(myName) === -1) {
+						bottomRight.appendChild(skipNonTimedButton);
+						bottomRight.appendChild(challengeButton);
+					}
 				}
 			}
 			break;
@@ -445,13 +473,19 @@ function reactLobbyEvent(message) {
 					center.innerHTML = "Waiting for other players...";
 				} else {
 					center.innerHTML = raidMsg.msg;
-					bottomRight.appendChild(challengeButton);
-					bottomRight.appendChild(skipButton); 
+					let lostPlayers = raidMsg.lost;
+					if(lostPlayers.indexOf(myName) === -1) {
+						bottomRight.appendChild(challengeButton);
+						bottomRight.appendChild(skipButton); 
+					}
 				}
 				
 				topCenter.appendChild(progressBarParent);
 				updateProgressBar(100, 0, rspWindowMs, raidMsg.interruptId);
 			}
+			break;
+		case "reset":
+			resetTable();
 			break;
 		default:
 			console.error("Unknown lobby header");
@@ -478,6 +512,9 @@ function reactPersonalEvent(message){
 	let headerCase = message.headers.case;
 	switch(headerCase){
 		case "init": {
+				if (typeof shuffleId === 'number') {
+					clearTimeout(shuffleId);
+			    }
 				document.getElementById("startRound").disabled = true;
 				document.getElementById("shufflePlayers").disabled = true;
 				let tableStarter = JSON.parse(message.body);
@@ -1028,6 +1065,12 @@ function respondForcedHitCard2(){
 		JSON.stringify({"interruptId":latestInterruptId, "cardIndex":1}));
 }
 
+function requestReset(){
+	cleanupInterrupt();
+	resetButton.disabled = true;
+	stompClient.send("/app/reset", {"secret":mySecret, "pname":myName}, myName);
+}
+
 function submitScramble(){
 	cleanupInterrupt();
 	
@@ -1288,7 +1331,7 @@ function reenableActionButtons(){
 	}
 }
 
-function cleanupInterrupt(){
+function cleanupInterrupt() {
 	let bottomRight = document.getElementById("cell-5-3");
 	let topCenter = document.getElementById("cell-2-2");
 	while (bottomRight.firstChild) {
@@ -1297,6 +1340,30 @@ function cleanupInterrupt(){
 	while (topCenter.firstChild) {
  	   topCenter.removeChild(topCenter.firstChild);
 	}
+}
+
+function resetTable() {
+	playerOrder = null;
+	divNamesByPlayerNames = null;
+	latestInterruptId = null;
+	isVoidLocked = null;
+	playerDivClickFuncs = [];
+	
+	for(let i = 0; i<activeDivNames.length; i++){
+		let currCell = document.getElementById(activeDivNames[i]);
+		while (currCell.firstChild) {
+	 	   currCell.removeChild(currCell.firstChild);
+		}
+		currCell.classList.remove("player-cell");
+		currCell.classList.remove("active-cell")
+	}
+	
+	activeDivNames = null;
+	cleanupInterrupt();
+	let center = document.getElementById("cell-2-3");
+	center.innerHTML = "";
+	document.getElementById("startRound").disabled = false;
+	document.getElementById("shufflePlayers").disabled = false;
 }
 
 $(function () {
@@ -1328,12 +1395,7 @@ $(function () {
 	submitScrambleButton.addEventListener("click", submitScramble);
 	counterAsNetOpsButton.addEventListener("click", counterStealAsNetOps);
 	counterAsCaptainButton.addEventListener("click", counterStealAsCaptain);
+	resetButton.addEventListener("click", requestReset);
 	$("#testbutton").click(function() { testButton(); }); 
 	$("#testbutton2").click(function() { testButton2(); });
 });
-
-//function initiateRoundReset(){
-//}
-//function roundReset(){
-//	stompClient.send("/app/roundreset", {}, myName);
-//}

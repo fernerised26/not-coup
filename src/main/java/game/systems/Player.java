@@ -53,6 +53,11 @@ public class Player {
 		jsonSelf = tempSelfJson;
 	}
 	
+	public Player cloneForReset() {
+		Player clone = new Player(name, secret);
+		return clone;
+	}
+	
 	public void addCardsInit(List<Card> cardsToAdd) {
 		for(Card card : cardsToAdd) {
 			cardsOwned.add(card);

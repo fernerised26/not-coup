@@ -2,6 +2,7 @@ package game.systems.interrupt;
 
 import java.time.Instant;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.concurrent.Future;
 
@@ -24,7 +25,7 @@ public abstract class Interrupt {
 	private Future defaultResolverFuture;
 	
 	//Used for interrupts that can be followed up by a challenge
-	public Interrupt(String interruptId, long duration, InterruptCase interruptCase, String focused) {
+	public Interrupt(String interruptId, long duration, InterruptCase interruptCase, String focused, List<String> eliminatedPlayerNames) {
 		super();
 		this.interruptId = interruptId;
 		this.startTime = Instant.now();
@@ -32,19 +33,33 @@ public abstract class Interrupt {
 		this.duration = duration;
 		this.interruptCase = interruptCase;
 		this.focused = focused;
+		responderNames.addAll(eliminatedPlayerNames);
 	}
 	
 	//For interrupts that can only be countered
-	public Interrupt(String interruptId, long duration, String focused) {
+	public Interrupt(String interruptId, long duration, String focused, List<String> eliminatedPlayerNames) {
 		super();
 		this.interruptId = interruptId;
 		this.startTime = Instant.now();
 		this.responderNames = new HashSet<>();
 		this.duration = duration;
 		this.focused = focused;
+		responderNames.addAll(eliminatedPlayerNames);
 	}
 	
-	//For interrupts that must wait indefinitely for game to proceed
+	//For interrupts that must wait indefinitely for game to proceed that can also be countered/challenged
+	public Interrupt(String interruptId, String focused, InterruptCase interruptCase, List<String> eliminatedPlayerNames) {
+		super();
+		this.interruptId = interruptId;
+		this.startTime = Instant.now();
+		this.responderNames = new HashSet<>();
+		this.duration = -1L;
+		this.focused = focused;
+		this.interruptCase = interruptCase;
+		responderNames.addAll(eliminatedPlayerNames);
+	}
+	
+	//For interrupts that must wait indefinitely for game to proceed that only have one valid responder
 	public Interrupt(String interruptId, String focused, InterruptCase interruptCase) {
 		super();
 		this.interruptId = interruptId;

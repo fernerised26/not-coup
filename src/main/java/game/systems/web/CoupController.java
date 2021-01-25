@@ -486,6 +486,13 @@ public class CoupController {
 		}
 	}
 
+	@MessageMapping("/reset")
+	public void handleReset(MessageHeaders headers) {
+		List<String> pNameHeader = (List<String>) ((Map<String, Object>) headers.get("nativeHeaders")).get("pname");
+		String playerName = pNameHeader.get(0);
+		table.reset(playerName);
+	}
+
 	private AuthTuple isMessageWellFormed(MessageHeaders headers, String action, String body) {
 		List<String> secretHeader = (List<String>) ((Map<String, Object>) headers.get("nativeHeaders")).get("secret");
 		List<String> pNameHeader = (List<String>) ((Map<String, Object>) headers.get("nativeHeaders")).get("pname");

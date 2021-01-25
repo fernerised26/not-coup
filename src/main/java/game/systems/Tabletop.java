@@ -47,8 +47,10 @@ public class Tabletop {
 	private static final Player DUMMY_PLAYER = new Player(null, null);
 	
 	private boolean roundActive = false;
+	private boolean resetReady = false;
 	private Map<String, Player> playerMap = new LinkedHashMap<>(); //Linked to maintain a play order
 	private JSONArray orderedPlayerNames;
+	private JSONArray eliminatedPlayerNames = new JSONArray();
 	private Deck deck = new DeckImpl();
 	private List<Card> tempHoldingSpace = new ArrayList<>();
 	private Player currActivePlayer = null;
@@ -102,6 +104,9 @@ public class Tabletop {
 			return;
 		}
 		synchronized(playerMap) {
+			if(roundActive) {
+				return;
+			}
 			Random rand = new Random();
 			for (int i = orderedPlayerNames.size(); i > 1; i--) {
 				int randomPoint = rand.nextInt(i);
@@ -139,12 +144,13 @@ public class Tabletop {
 					
 					String nextPlayerName = (String) orderedPlayerNames.get(i+1);
 					Player nextPlayer = playerMap.get(nextPlayerName);
-					currPlayer.setPrevPlayer(nextPlayer);
+					currPlayer.setNextPlayer(nextPlayer);
 					
 					newPlayerMap.put(currPlayerName, currPlayer);
 				}
 			}
-			playerMap = newPlayerMap;
+			playerMap.clear();
+			playerMap.putAll(newPlayerMap);
 			String playerListHtml = convertSetToHtml(playerMap.keySet());
 			tableController.notifyTableOfPlayerChange(playerListHtml);
 		}
@@ -152,6 +158,9 @@ public class Tabletop {
 	
 	public boolean startRound() throws IOException {
 		synchronized(playerMap) {
+			if(roundActive) {
+				return false;
+			}
 			roundActive = true;
 			deck.initialize();
 			Player lastPlayerToJoin = playerMap.get(orderedPlayerNames.get(orderedPlayerNames.size()-1));
@@ -235,6 +244,10 @@ public class Tabletop {
 			if(playerName.equals(activeInterrupt.getFocused())){
 				return false; //can't respond to your own action
 			}
+			Player responder = playerMap.get(playerName);
+			if(responder.isLost()) {
+				return false;
+			}
 			return true;
 		} else {
 			return false;
@@ -295,7 +308,7 @@ public class Tabletop {
 	public void handleCrowdfund() {
 		String crowdfundId = UUID.randomUUID().toString();
 		
-		CrowdfundInterrupt interrupt = new CrowdfundInterrupt(crowdfundId, INTERRUPT_WAIT_MS, currActivePlayer.getName());
+		CrowdfundInterrupt interrupt = new CrowdfundInterrupt(crowdfundId, INTERRUPT_WAIT_MS, currActivePlayer.getName(), eliminatedPlayerNames);
 		InterruptDefaultResolver interruptKillswitch = new InterruptDefaultResolver(crowdfundId, INTERRUPT_WAIT_MS, this, InterruptCase.CROWDFUND);
 		interruptibles.put(crowdfundId, interrupt);
 		
@@ -318,7 +331,7 @@ public class Tabletop {
 		if(activeCrowdfundInterrupt != null) {
 			activeCrowdfundInterrupt.setActive(false);
 			String counterId = UUID.randomUUID().toString();
-			CrowdfundCounterInterrupt interrupt = new CrowdfundCounterInterrupt(counterId, INTERRUPT_WAIT_MS, interruptingPlayerName, InterruptCase.CROWDFUND_COUNTER);
+			CrowdfundCounterInterrupt interrupt = new CrowdfundCounterInterrupt(counterId, INTERRUPT_WAIT_MS, interruptingPlayerName, InterruptCase.CROWDFUND_COUNTER, eliminatedPlayerNames);
 			InterruptDefaultResolver interruptKillswitch = new InterruptDefaultResolver(counterId, INTERRUPT_WAIT_MS, this, InterruptCase.CROWDFUND_COUNTER);
 			interruptibles.put(counterId, interrupt);
 			
@@ -580,9 +593,7 @@ public class Tabletop {
 				
 				Player winnerCandidate = checkForWinner(challengedPlayer);
 				if(winnerCandidate != null) {
-					sendUpdatedBoardToPlayers(false);
-					JSONObject returnObj = buildWinnerRsp(winnerCandidate.getName(), winnerCandidate.getName()+" is the winner!");
-					tableController.notifyTableOfWinner(returnObj.toJSONString());
+					executeWinSequence(winnerCandidate);
 					return;
 				}
 				
@@ -618,9 +629,7 @@ public class Tabletop {
 				challengerPlayer.eliminateCardInHand(cardIndexRsp);
 				Player winnerCandidate = checkForWinner(challengerPlayer);
 				if(winnerCandidate != null) {
-					sendUpdatedBoardToPlayers(false);
-					JSONObject returnObj = buildWinnerRsp(winnerCandidate.getName(), winnerCandidate.getName()+" is the winner!");
-					tableController.notifyTableOfWinner(returnObj.toJSONString());
+					executeWinSequence(winnerCandidate);
 					return;
 				}
 				
@@ -658,7 +667,7 @@ public class Tabletop {
 				case ORDER_HIT_COUNTER_CHALLENGE_LOSS:
 					Player hitOrderer = playerMap.get(challengeLossInterrupt.getThirdParty());
 					hitOrderer.addCoins(-3);
-					flavorMsg.append(hitOrderer.getName() + "'s hit on " + challengeLossInterrupt.getChallenged() + "is botched.");
+					flavorMsg.append(hitOrderer.getName() + "'s hit on " + challengeLossInterrupt.getChallenged() + " is botched.");
 					tableController.notifyTableWithSimpleMessage(flavorMsg.toString());
 					advanceActivePlayer();
 					sendUpdatedBoardToPlayers(true);
@@ -666,7 +675,7 @@ public class Tabletop {
 				case SCRAMBLE_IDENTITY_CHALLENGE_LOSS:
 					sendUpdatedBoardToPlayers(false);
 					String scrambleGuaranteedId = UUID.randomUUID().toString();
-					ScrambleInterrupt interrupt = new ScrambleInterrupt(scrambleGuaranteedId,currActivePlayer.getName(), InterruptCase.SCRAMBLE_IDENTITY);
+					ScrambleInterrupt interrupt = new ScrambleInterrupt(scrambleGuaranteedId,currActivePlayer.getName(), InterruptCase.SCRAMBLE_IDENTITY, eliminatedPlayerNames);
 					interruptibles.put(scrambleGuaranteedId, interrupt);
 					resolveScrambleIdentity1(scrambleGuaranteedId);
 					break;
@@ -711,7 +720,7 @@ public class Tabletop {
 			activeInterrupt.addResponder(skippingPlayerName);
 			int responderCount = activeInterrupt.getNumberOfResponders();
 			
-			if(responderCount >= (playerMap.size() - 1)) {
+			if(responderCount >= (playerMap.size()-1)) {
 				activeInterrupt.getDefaultResolverFuture().cancel(true);
 			}
 		}
@@ -781,9 +790,7 @@ public class Tabletop {
 				Card voidedCard = voidedPlayer.eliminateCardInHand(cardIndexRsp);
 				Player winnerCandidate = checkForWinner(voidedPlayer);
 				if(winnerCandidate != null) {
-					sendUpdatedBoardToPlayers(false);
-					JSONObject returnObj = buildWinnerRsp(winnerCandidate.getName(), winnerCandidate.getName()+" is the winner!");
-					tableController.notifyTableOfWinner(returnObj.toJSONString());
+					executeWinSequence(winnerCandidate);
 					return;
 				}
 				voiderPlayer.addCoins(-7);
@@ -802,7 +809,7 @@ public class Tabletop {
 	public void handlePrintMoney() {
 		String printMoneyId = UUID.randomUUID().toString();
 		
-		PrintMoneyInterrupt interrupt = new PrintMoneyInterrupt(printMoneyId, INTERRUPT_WAIT_MS, InterruptCase.PRINT_MONEY, currActivePlayer.getName());
+		PrintMoneyInterrupt interrupt = new PrintMoneyInterrupt(printMoneyId, INTERRUPT_WAIT_MS, InterruptCase.PRINT_MONEY, currActivePlayer.getName(), eliminatedPlayerNames);
 		InterruptDefaultResolver interruptKillswitch = new InterruptDefaultResolver(printMoneyId, INTERRUPT_WAIT_MS, this, InterruptCase.PRINT_MONEY);
 		interruptibles.put(printMoneyId, interrupt);
 		
@@ -839,7 +846,7 @@ public class Tabletop {
 		}
 		if(targetPlayer != null && !targetPlayer.equals(currActivePlayer) && !targetPlayer.isLost()) {
 			String hitId = UUID.randomUUID().toString();
-			HitInterrupt interrupt = new HitInterrupt(hitId, orderer, targetPlayerName, InterruptCase.ORDER_HIT);
+			HitInterrupt interrupt = new HitInterrupt(hitId, orderer, targetPlayerName, InterruptCase.ORDER_HIT, eliminatedPlayerNames);
 			interruptibles.put(hitId, interrupt);
 			try { 
 				int validRspIndices = getValidCardLossIndices(targetPlayer);
@@ -880,9 +887,7 @@ public class Tabletop {
 				hitOrdererPlayer.addCoins(-3);
 				Player winnerCandidate = checkForWinner(targetPlayer);
 				if(winnerCandidate != null) {
-					sendUpdatedBoardToPlayers(false);
-					JSONObject returnObj = buildWinnerRsp(winnerCandidate.getName(), winnerCandidate.getName()+" is the winner!");
-					tableController.notifyTableOfWinner(returnObj.toJSONString());
+					executeWinSequence(winnerCandidate);
 					return;
 				}
 				tableController.notifyTableWithSimpleMessage(hitOrderer+"'s hitman eliminates " + target + "'s "+eliminatedCard.getRole().name() + ".");
@@ -918,9 +923,7 @@ public class Tabletop {
 				forcedPlayer.eliminateCardInHand(cardIndexRsp);
 				Player winnerCandidate = checkForWinner(forcedPlayer);
 				if(winnerCandidate != null) {
-					sendUpdatedBoardToPlayers(false);
-					JSONObject returnObj = buildWinnerRsp(winnerCandidate.getName(), winnerCandidate.getName()+" is the winner!");
-					tableController.notifyTableOfWinner(returnObj.toJSONString());
+					executeWinSequence(winnerCandidate);
 					return;
 				}
 				originalHitOrdererPlayer.addCoins(-3);
@@ -963,9 +966,7 @@ public class Tabletop {
 			
 			Player winnerCandidate = checkForWinner(utterlyLostPlayer);
 			if(winnerCandidate != null) {
-				sendUpdatedBoardToPlayers(false);
-				JSONObject returnObj = buildWinnerRsp(winnerCandidate.getName(), winnerCandidate.getName()+" is the winner!");
-				tableController.notifyTableOfWinner(returnObj.toJSONString());
+				executeWinSequence(winnerCandidate);
 				return;
 			}
 			int defenderIndexCardToReplace = challengeUtterLossInterrupt.getRevealedDefendingCardIndex();
@@ -993,7 +994,7 @@ public class Tabletop {
 			String decoyId = UUID.randomUUID().toString();
 			String orderer = hitInterrupt.getHitOrderer();
 			String target = hitInterrupt.getTarget();
-			DecoyInterrupt decoyInterrupt = new DecoyInterrupt(decoyId, INTERRUPT_WAIT_MS, InterruptCase.ORDER_HIT_COUNTER, target, orderer);
+			DecoyInterrupt decoyInterrupt = new DecoyInterrupt(decoyId, INTERRUPT_WAIT_MS, InterruptCase.ORDER_HIT_COUNTER, target, orderer, eliminatedPlayerNames);
 			InterruptDefaultResolver interruptKillswitch = new InterruptDefaultResolver(decoyId, INTERRUPT_WAIT_MS, this, InterruptCase.ORDER_HIT_COUNTER);
 			interruptibles.put(decoyId, decoyInterrupt);
 			
@@ -1024,7 +1025,7 @@ public class Tabletop {
 	
 	public void handleScrambleIdentity() {
 		String scrambleId = UUID.randomUUID().toString();
-		ScrambleInterrupt interrupt = new ScrambleInterrupt(scrambleId, INTERRUPT_WAIT_MS, InterruptCase.SCRAMBLE_IDENTITY, currActivePlayer.getName());
+		ScrambleInterrupt interrupt = new ScrambleInterrupt(scrambleId, INTERRUPT_WAIT_MS, InterruptCase.SCRAMBLE_IDENTITY, currActivePlayer.getName(), eliminatedPlayerNames);
 		InterruptDefaultResolver interruptKillswitch = new InterruptDefaultResolver(scrambleId, INTERRUPT_WAIT_MS, this, InterruptCase.SCRAMBLE_IDENTITY);
 		interruptibles.put(scrambleId, interrupt);
 		
@@ -1052,7 +1053,7 @@ public class Tabletop {
 			
 			scrambleInterrupt.setActive(false);
 			String scrambleSelectId = UUID.randomUUID().toString();
-			ScrambleInterrupt scrambleSelectInterrupt = new ScrambleInterrupt(scrambleSelectId, currActivePlayer.getName(), InterruptCase.SCRAMBLE_SELECT);
+			ScrambleInterrupt scrambleSelectInterrupt = new ScrambleInterrupt(scrambleSelectId, currActivePlayer.getName(), InterruptCase.SCRAMBLE_SELECT, eliminatedPlayerNames);
 			interruptibles.put(scrambleSelectId, scrambleSelectInterrupt);
 				
 			List<Card> additionalCards = deck.draw(2);
@@ -1129,7 +1130,7 @@ public class Tabletop {
 		
 		if(targetPlayer != null && !targetPlayer.equals(currActivePlayer) && !targetPlayer.isLost()) {
 			String raidId = UUID.randomUUID().toString();
-			RaidInterrupt interrupt = new RaidInterrupt(raidId, INTERRUPT_WAIT_MS, raider, targetPlayerName, InterruptCase.RAID);
+			RaidInterrupt interrupt = new RaidInterrupt(raidId, INTERRUPT_WAIT_MS, raider, targetPlayerName, InterruptCase.RAID, eliminatedPlayerNames);
 			InterruptDefaultResolver interruptKillswitch = new InterruptDefaultResolver(raidId, INTERRUPT_WAIT_MS, this, InterruptCase.RAID);
 			interruptibles.put(raidId, interrupt);
 			JSONObject returnObj = buildRaidRsp(targetPlayerName, raider, raidId, raider + " is raiding the assets of " + targetPlayerName + ".");
@@ -1177,15 +1178,15 @@ public class Tabletop {
 			String blockId = UUID.randomUUID().toString();
 			String raider = raidInterrupt.getRaider();
 			String blocker = raidInterrupt.getTarget();
-			BlockInterrupt blockInterrupt = new BlockInterrupt(blockId, INTERRUPT_WAIT_MS, InterruptCase.RAID_COUNTER, blocker, raider, blockingRole);
+			BlockInterrupt blockInterrupt = new BlockInterrupt(blockId, INTERRUPT_WAIT_MS, InterruptCase.RAID_COUNTER, blocker, raider, blockingRole, eliminatedPlayerNames);
 			InterruptDefaultResolver interruptKillswitch = new InterruptDefaultResolver(blockId, INTERRUPT_WAIT_MS, this, InterruptCase.RAID_COUNTER);
 			interruptibles.put(blockId, blockInterrupt);
 			
 			if(Roles.NETOPS.equals(blockingRole)) {
-				JSONObject returnObj = buildInterruptOppRsp(blocker, "sabotage", blockId, blocker+" attempts to sabotage the raiding team's comms.");
+				JSONObject returnObj = buildInterruptOppRsp(blocker, "sabotage", blockId, blocker+"'s NetOps attempts to sabotage the raiding team's comms.");
 				tableController.notifyTableOfChallengeOpp(returnObj.toJSONString());
 			} else {
-				JSONObject returnObj = buildInterruptOppRsp(blocker, "fortify", blockId, blocker+" prepares a counterattack on the raiding team.");
+				JSONObject returnObj = buildInterruptOppRsp(blocker, "fortify", blockId, blocker+"'s Captain prepares a counterattack on the raiding team.");
 				tableController.notifyTableOfChallengeOpp(returnObj.toJSONString());
 			}
 			Future<?> defaultResolverFuture = interruptThreadPool.submit(interruptKillswitch);
@@ -1210,6 +1211,61 @@ public class Tabletop {
 			}
 			advanceActivePlayer();
 			sendUpdatedBoardToPlayers(true);
+		}
+	}
+	
+	public void reset(String resettingPlayer) {
+		synchronized(playerMap) {
+			if(roundActive && resetReady) {
+				Map<String, Player> resetPlayerMap = new LinkedHashMap<>();
+				
+				for (int i = 0; i < orderedPlayerNames.size(); i++) {
+					if(i == 0) {
+						String player1Name = (String) orderedPlayerNames.get(0);
+						Player player1 = playerMap.get(player1Name);
+						Player resetPlayer1 = player1.cloneForReset();
+						
+						String player2Name = (String) orderedPlayerNames.get(1);
+						Player player2 = playerMap.get(player2Name);
+						Player resetPlayer2 = player2.cloneForReset();
+						resetPlayer1.setNextPlayer(resetPlayer2);
+						resetPlayerMap.put(player1Name, resetPlayer1);
+						resetPlayerMap.put(player2Name, resetPlayer2);
+					} else if(i == (orderedPlayerNames.size() - 1)) {
+						String playerLastName = (String) orderedPlayerNames.get(i);
+						Player playerResetLast = resetPlayerMap.get(playerLastName);
+						
+						String playerPenultimateName = (String) orderedPlayerNames.get(i-1);
+						Player playerResetPenultimate = resetPlayerMap.get(playerPenultimateName);
+						playerResetLast.setPrevPlayer(playerResetPenultimate);
+					} else {
+						String currPlayerName = (String) orderedPlayerNames.get(i);
+						Player currResetPlayer = resetPlayerMap.get(currPlayerName);
+						
+						String prevPlayerName = (String) orderedPlayerNames.get(i-1);
+						Player prevResetPlayer = resetPlayerMap.get(prevPlayerName);
+						currResetPlayer.setPrevPlayer(prevResetPlayer);
+						
+						String nextPlayerName = (String) orderedPlayerNames.get(i+1);
+						Player nextResetPlayer = playerMap.get(nextPlayerName).cloneForReset();
+						currResetPlayer.setNextPlayer(nextResetPlayer);
+						
+						resetPlayerMap.put(nextPlayerName, nextResetPlayer);
+					}
+				}
+				
+				eliminatedPlayerNames = new JSONArray();
+				deck = new DeckImpl();
+				tempHoldingSpace = new ArrayList<>();
+				currActivePlayer = null;
+				interruptibles = new HashMap<>();
+				resetReady = false;
+				roundActive = false;
+				JSONObject returnObj = buildResetMsg("Table was reset by: "+resettingPlayer);
+				tableController.notifyTableOfReset(returnObj.toJSONString());
+				playerMap.clear();
+				playerMap.putAll(resetPlayerMap);
+			}
 		}
 	}
 	
@@ -1278,6 +1334,7 @@ public class Tabletop {
 	private Player checkForWinner(Player playerAtRisk) {
 		if(playerAtRisk.getCardInHand(0).isEliminated() && playerAtRisk.getCardInHand(1).isEliminated()) {
 			playerAtRisk.eliminatePlayer();
+			eliminatedPlayerNames.add(playerAtRisk.getName());
 			Player tempPlayer = null;
 			boolean onePlayerNotLost = false;
 			for(Entry<String, Player> playerEntry : playerMap.entrySet()) {
@@ -1317,6 +1374,7 @@ public class Tabletop {
 		returnObj.put("interruptFor", interruptFor);
 		returnObj.put("interruptId", interruptId);
 		returnObj.put("rspWindowMs", INTERRUPT_WAIT_MS);
+		returnObj.put("lost", eliminatedPlayerNames);
 		returnObj.put("msg", msg);
 		return returnObj;
 	}
@@ -1363,6 +1421,7 @@ public class Tabletop {
 		returnObj.put("interruptId", interruptId);
 		returnObj.put("msg", msg);
 		returnObj.put("valid", validIndices);
+		returnObj.put("lost", eliminatedPlayerNames);
 		return returnObj;
 	}
 	
@@ -1388,6 +1447,20 @@ public class Tabletop {
 		returnObj.put("raider", raiderName);
 		returnObj.put("interruptId", interruptId);
 		returnObj.put("rspWindowMs", INTERRUPT_WAIT_MS);
+		returnObj.put("msg", msg);
+		returnObj.put("lost", eliminatedPlayerNames);
+		return returnObj;
+	}
+	
+	private void executeWinSequence(Player winner) {
+		resetReady = true;
+		sendUpdatedBoardToPlayers(false);
+		JSONObject returnObj = buildWinnerRsp(winner.getName(), winner.getName()+" is the winner!");
+		tableController.notifyTableOfWinner(returnObj.toJSONString());
+	}
+	
+	private JSONObject buildResetMsg(String msg) {
+		JSONObject returnObj = new JSONObject();
 		returnObj.put("msg", msg);
 		return returnObj;
 	}
