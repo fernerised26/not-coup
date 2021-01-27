@@ -404,8 +404,8 @@ function reactLobbyEvent(message) {
 					center.innerHTML = hitOrderMsg.msg;
 					let lostPlayers = hitOrderMsg.lost;
 					if(lostPlayers.indexOf(myName) === -1) {
-						bottomRight.appendChild(skipNonTimedButton);
 						bottomRight.appendChild(challengeButton);
+						bottomRight.appendChild(skipNonTimedButton);
 					}
 				}
 			}
@@ -437,11 +437,13 @@ function reactLobbyEvent(message) {
 				
 				if(myName === targetPlayer){
 					latestInterruptId = forcedHitOrderMsg.interruptId;
+					let bottomRight = document.getElementById("cell-5-3");
 					center.innerHTML = "The hitman was the real deal. Select a card in your hand to lose or a counter response.";
 					let myPlayerSpot = document.getElementById("self-player");
 					let card1Div = myPlayerSpot.getElementsByClassName("card-1")[0];
 					let card2Div = myPlayerSpot.getElementsByClassName("card-2")[0];
-					enableValidClickableCardsHitOrder(card1Div, card2Div, validIndices);
+					enableValidClickableCardsForcedHitOrder(card1Div, card2Div, validIndices);
+					bottomRight.appendChild(counterHitButton);
 				} else {
 					center.innerHTML = forcedHitOrderMsg.msg;
 				}
@@ -1199,6 +1201,8 @@ function cleanupHitResponses(){
 	let cardDivs = cleanupHoverableCardClass(); 
 	cardDivs[0].removeEventListener("click", respondHitCard1);
 	cardDivs[1].removeEventListener("click", respondHitCard2);
+	cardDivs[0].removeEventListener("click", respondForcedHitCard1);
+	cardDivs[1].removeEventListener("click", respondForcedHitCard2);
 }
 
 function cleanupHoverableCardClass(){
@@ -1366,6 +1370,17 @@ function resetTable() {
 	document.getElementById("shufflePlayers").disabled = false;
 }
 
+function appendDelayedActivationInterruptButton(divToAppend, buttonObj){
+	buttonObj.disabled = true;
+	divToAppend.appendChild(buttonObj);
+	setTimeout(
+		function(){
+			buttonObj.disabled = false;
+		}, 
+		1500
+	);
+}
+
 $(function () {
     $("form").on('submit', function (e) {
         e.preventDefault();
@@ -1396,6 +1411,4 @@ $(function () {
 	counterAsNetOpsButton.addEventListener("click", counterStealAsNetOps);
 	counterAsCaptainButton.addEventListener("click", counterStealAsCaptain);
 	resetButton.addEventListener("click", requestReset);
-	$("#testbutton").click(function() { testButton(); }); 
-	$("#testbutton2").click(function() { testButton2(); });
 });

@@ -43,7 +43,7 @@ import game.systems.web.TableController;
 @Component
 public class Tabletop {
 	
-	private static final long INTERRUPT_WAIT_MS = 10000L;
+	private static final long INTERRUPT_WAIT_MS = 15000L;
 	private static final Player DUMMY_PLAYER = new Player(null, null);
 	
 	private boolean roundActive = false;
@@ -272,10 +272,20 @@ public class Tabletop {
 			if(!(activeInterrupt instanceof HitInterrupt)) {
 				return false;
 			}
-			HitInterrupt activeHitInterrupt = (HitInterrupt) activeInterrupt;
-			if(playerName.equals(activeHitInterrupt.getTarget())){
-				return true;
-			}
+			if(activeInterrupt instanceof HitInterrupt) {
+				HitInterrupt activeHitInterrupt = (HitInterrupt) activeInterrupt;
+				if(playerName.equals(activeHitInterrupt.getTarget())){
+					return true;
+				}
+			} 
+			
+//			|| activeInterrupt instanceof ForcedHitInterrupt
+//			else if(activeInterrupt instanceof ForcedHitInterrupt){
+//				ForcedHitInterrupt activeHitInterrupt = (ForcedHitInterrupt) activeInterrupt;
+//				if(playerName.equals(activeHitInterrupt.getForced())){
+//					return true;
+//				}
+//			}
 			return false;
 		} else {
 			return false;
@@ -910,8 +920,8 @@ public class Tabletop {
 		
 		if(forcedHitInterrupt != null) {
 			forcedHitInterrupt.setActive(false);
-			String originalHitOrderer = forcedHitInterrupt.getOriginalHitOrderer();
-			String forced = forcedHitInterrupt.getForced();
+			String originalHitOrderer = forcedHitInterrupt.getHitOrderer();
+			String forced = forcedHitInterrupt.getTarget();
 			Player forcedPlayer = playerMap.get(forced); 
 			Player originalHitOrdererPlayer = playerMap.get(originalHitOrderer);
 			
@@ -1292,7 +1302,7 @@ public class Tabletop {
 		interruptibles.put(forcedHitId, forcedHitInterrupt);
 		try {
 			int validRspIndices = getValidCardLossIndices(targetPlayer);
-			JSONObject returnObj = buildHitRsp(targetPlayerName, orderer, forcedHitId, orderer+"'s hit on " + targetPlayerName + " goes through.", validRspIndices);
+			JSONObject returnObj = buildHitRsp(targetPlayerName, orderer, forcedHitId, orderer+"'s hit on " + targetPlayerName + " goes through. "+ targetPlayerName + " must handle the hit.", validRspIndices);
 			tableController.notifyTableOfForcedHitOrder(returnObj.toJSONString());	
 		} catch (GameException e) {
 			tableController.notifyTableOfUnauthorizedActivity("Targeted player should have already lost: " + targetPlayerName);

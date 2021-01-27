@@ -1,22 +1,16 @@
 package game.systems.interrupt;
 
-public class ForcedHitInterrupt extends Interrupt{
+import java.util.ArrayList;
+import java.util.List;
+
+public class ForcedHitInterrupt extends HitInterrupt{
 	
-	private final String originalHitOrderer;
+	private static final List<String> EMPTY_LIST = new ArrayList<>();
 
 	/**
 	 * @param focused Inclusionary, only focused player is allowed to respond.
 	 */
 	public ForcedHitInterrupt(String interruptId, String forced, String originalHitOrderer, InterruptCase interruptCase) {
-		super(interruptId, forced, interruptCase);
-		this.originalHitOrderer = originalHitOrderer;
-	}
-
-	public String getOriginalHitOrderer() {
-		return originalHitOrderer;
-	}
-
-	public String getForced() {
-		return getFocused();
+		super(interruptId, originalHitOrderer, forced, interruptCase, EMPTY_LIST);
 	}
 }

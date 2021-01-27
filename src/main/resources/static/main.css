@@ -30,6 +30,24 @@ body {
 	font-size: 2em;
 }
 
+#replay-log {
+	max-width: 250px;
+	min-width: 250px;
+	max-height: 500px;
+	min-height: 250px;
+	overflow: scroll;
+	font-size: 1.2em;
+	font-family: 'Share Tech Mono', monospace;
+	background-color: #000000;
+	border-width:5px;  
+    border-style:inset;
+    color: #00ff00;
+}
+
+.off-color {
+	color: #ffa500;
+}
+
 #log-window {
 	max-width: 250px;
 }
@@ -81,13 +99,11 @@ body {
 .owned-pieces {
 	height: 80%;
 	width: 100%;
-/* 	background-color: #554eabff; */
 	background-image: repeating-linear-gradient(180deg, black, #666666);
 	top: 0px;
 	margin-left:0px;
 	margin-right:0px;
 	border: 0px solid #000000;
-/* 	border-radius: 5px; */
 }
 .coins {
 	height: 100%;
@@ -161,7 +177,6 @@ body {
 	font-family: 'Share Tech Mono', monospace;
 	width: 95%;
 	color: #00ff00;
-	font-family: 'Share Tech Mono', monospace;
 	background-color: #000000;
 	border: 1px solid #00ff00;
 }
@@ -212,14 +227,11 @@ body {
 
 #cell-5-1 {
 	background-color: #000000;
-/* 	border-radius: 5px; */
-/* 	padding: 2px; */
 	padding-right: 1px;
 }
 
 #cell-5-3 {
 	background-color: #000000;
-/* 	border-radius: 5px; */
 	padding: 5px;
 }
 
@@ -245,6 +257,10 @@ body {
 }
 
 #skip {
+	font-size: 2em;
+}
+
+#skipspecial {
 	font-size: 2em;
 }
 
