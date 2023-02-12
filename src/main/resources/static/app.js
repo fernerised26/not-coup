@@ -204,6 +204,18 @@ function shufflePlayers() {
 	stompClient.send("/app/shuffleplayers", {}, myName);
 }
 
+function appendToReplay(msgToAppend){
+	let replayLog = document.getElementById("replay-log");
+	let newLogLine = document.createElement("div");
+	if(replayLog.lastChild !== null) {
+		if(!replayLog.lastChild.classList.contains("off-color")) {
+			newLogLine.classList.add("off-color");
+		}
+	}
+	newLogLine.innerHTML = msgToAppend;
+	replayLog.appendChild(newLogLine);
+}
+
 function reactLobbyEvent(message) {
 	let headerCase = message.headers.case;
 	switch(headerCase){
@@ -216,6 +228,10 @@ function reactLobbyEvent(message) {
 		case "logwindow": {
 				let logWindowMsg = JSON.parse(message.body);
 				$("#log-window").html(logWindowMsg.msg);
+			}
+			break;
+		case "short": {
+				appendToReplay(message.body);
 			}
 			break;
 		case "simpmsg":{
@@ -236,7 +252,7 @@ function reactLobbyEvent(message) {
 				progressBarChild.style.width = "100%";
 				progressBarChild.innerText = (rspWindowMs / 1000) + "secs";
 				latestInterruptId = groupCounterMsg.interruptId;
-				
+				appendToReplay(groupCounterMsg.short);
 				if(myName !== playerToCounter){
 					let lostPlayers = groupCounterMsg.lost;
 					center.innerHTML = groupCounterMsg.msg;
@@ -245,8 +261,8 @@ function reactLobbyEvent(message) {
 						let bottomRight = document.getElementById("cell-5-3");
 						switch(actionToCounter){
 							case "crowdfund":
-								bottomRight.appendChild(counterCrowdfundButton);
-								bottomRight.appendChild(skipButton);
+								appendDelayedActivationInterruptButton(bottomRight, counterCrowdfundButton);
+								appendDelayedActivationInterruptButton(bottomRight, skipButton);
 								break;
 							default:
 								console.error("Unknown action to counter: "+actionToCounter); 
@@ -264,20 +280,21 @@ function reactLobbyEvent(message) {
 				let center = document.getElementById("cell-2-3");
 				let topCenter = document.getElementById("cell-2-2");
 				
-				let groupCounterMsg = JSON.parse(message.body);
-				let playerToChallenge = groupCounterMsg.atRisk;
-				let rspWindowMs = groupCounterMsg.rspWindowMs;
-				latestInterruptId = groupCounterMsg.interruptId;
+				let challengeOppMsg = JSON.parse(message.body);
+				let playerToChallenge = challengeOppMsg.atRisk;
+				let rspWindowMs = challengeOppMsg.rspWindowMs;
+				latestInterruptId = challengeOppMsg.interruptId;
+				appendToReplay(challengeOppMsg.short);
 				
 				progressBarChild.setAttribute("aria-valuenow", "100");
 				progressBarChild.style.width = "100%";
 				progressBarChild.innerText = (rspWindowMs / 1000) + "secs";
 				
 				if(myName !== playerToChallenge){
-					let lostPlayers = groupCounterMsg.lost;
-					center.innerHTML = groupCounterMsg.msg;
+					let lostPlayers = challengeOppMsg.lost;
+					center.innerHTML = challengeOppMsg.msg;
 					if(lostPlayers.indexOf(myName) === -1) {
-						let actionToChallenge = groupCounterMsg.interruptFor;
+						let actionToChallenge = challengeOppMsg.interruptFor;
 						let bottomRight = document.getElementById("cell-5-3");
 						switch(actionToChallenge){
 							case "crowdfundCounter":
@@ -286,8 +303,8 @@ function reactLobbyEvent(message) {
 							case "scrambleIdentity":
 							case "sabotage":
 							case "fortify":
-								bottomRight.appendChild(challengeButton);
-								bottomRight.appendChild(skipButton);
+								appendDelayedActivationInterruptButton(bottomRight, challengeButton);
+								appendDelayedActivationInterruptButton(bottomRight, skipButton);
 								break;
 							default:
 								console.error("Unknown action to counter: "+actionToChallenge); 
@@ -297,7 +314,7 @@ function reactLobbyEvent(message) {
 					center.innerHTML = "Waiting for other players...";
 				}
 				topCenter.appendChild(progressBarParent);
-				updateProgressBar(100, 0, rspWindowMs, groupCounterMsg.interruptId);
+				updateProgressBar(100, 0, rspWindowMs, challengeOppMsg.interruptId);
 			}
 			break;
 		case "challenge": {
@@ -395,8 +412,8 @@ function reactLobbyEvent(message) {
 					let card1Div = myPlayerSpot.getElementsByClassName("card-1")[0];
 					let card2Div = myPlayerSpot.getElementsByClassName("card-2")[0];
 					enableValidClickableCardsHitOrder(card1Div, card2Div, validIndices);
-					bottomRight.appendChild(challengeWhenHitTargetedButton);
-					bottomRight.appendChild(counterHitButton);
+					appendDelayedActivationInterruptButton(bottomRight, challengeWhenHitTargetedButton);
+					appendDelayedActivationInterruptButton(bottomRight, counterHitButton);
 				} else if(myName === ordererPlayer) {
 					center.innerHTML = "Waiting for other players..."
 				} else {
@@ -404,8 +421,8 @@ function reactLobbyEvent(message) {
 					center.innerHTML = hitOrderMsg.msg;
 					let lostPlayers = hitOrderMsg.lost;
 					if(lostPlayers.indexOf(myName) === -1) {
-						bottomRight.appendChild(challengeButton);
-						bottomRight.appendChild(skipNonTimedButton);
+						appendDelayedActivationInterruptButton(bottomRight, challengeButton);
+						appendDelayedActivationInterruptButton(bottomRight, skipNonTimedButton);
 					}
 				}
 			}
@@ -443,7 +460,7 @@ function reactLobbyEvent(message) {
 					let card1Div = myPlayerSpot.getElementsByClassName("card-1")[0];
 					let card2Div = myPlayerSpot.getElementsByClassName("card-2")[0];
 					enableValidClickableCardsForcedHitOrder(card1Div, card2Div, validIndices);
-					bottomRight.appendChild(counterHitButton);
+					appendDelayedActivationInterruptButton(bottomRight, counterHitButton);
 				} else {
 					center.innerHTML = forcedHitOrderMsg.msg;
 				}
